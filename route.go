@@ -1,4 +1,4 @@
-package tnwb
+package cedar
 
 import (
 	"errors"
@@ -77,7 +77,7 @@ func (mux *Trie) Delete(path string, fun http.HandlerFunc) {
 	mux.Insert(http.MethodDelete, path, fun)
 }
 func (mux *Trie) Static(filepath string) {
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
 }
 func (mux *Trie) Listening(parameter ...interface{}) error {
 	if len(parameter) != 2 && len(parameter) != 4 {
