@@ -3,12 +3,10 @@ package cedar
 import (
 	"errors"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var FileType = map[string]string{"css": "text/css"}
@@ -26,8 +24,6 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	}
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	logg := log.New(mux.file, "[Info]", log.Llongfile)
-	logg.Println(time.ANSIC + "\t" + r.Proto + "\t" + r.URL.Path + "\t" + r.Host + "\t" + r.Method)
 	reg := regexp.MustCompile(`^/static[/\w]*\.\w+$`)
 	file := reg.FindStringSubmatch(r.URL.String())
 	if len(file) != 0 {
@@ -40,6 +36,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
 		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
+		return
 	}
 	if fun != nil {
 		fun(w, r)
