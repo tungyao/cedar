@@ -2,13 +2,18 @@ package test
 
 import (
 	"../../cedar"
+	"fmt"
+	"net/http"
 	"testing"
 )
 
 func TestR(t *testing.T) {
 	r := cedar.NewRestRouter(cedar.RestConfig{
-		"wechat",
-		"api",
+		EntryPath: "wechat",
+		ApiName:   "api",
 	})
-	r.GetR()
+	r.GetR("user", func(writer http.ResponseWriter, request *http.Request) {
+		_, _ = fmt.Fprintln(writer, "hello")
+	})
+	http.ListenAndServe(":80", r)
 }

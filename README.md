@@ -18,5 +18,18 @@ r.Group("/",func (group *cedar.Groups){
 })
 ```
 ---
+RestFul 
+```go
+r := cedar.NewRestRouter(cedar.RestConfig{
+		EntryPath: "wechat",
+		ApiName:   "api",
+})
+r.GetR(api,fn)
+r.PostR(api,fn)
+r.PutR(api,fn)
+r.DeleteR(api,fn)
+
+entry url => localhost/wechat?api=user
+```
 ### Usage
 next time
