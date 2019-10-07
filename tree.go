@@ -44,7 +44,6 @@ func (mux *Trie) Insert(method string, path string, handler http.HandlerFunc) {
 	son := mux.root //son 是指针，不是普通变量
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
-	fmt.Println(res)
 	if son.key != path { //匹配不成功才加入链表
 		for _, key := range res { //遍历数组
 			if son.child[key] == nil { //第一个son节点是不是空 ，如果是数据和节点key放进去
@@ -65,7 +64,7 @@ func (mux *Trie) Insert(method string, path string, handler http.HandlerFunc) {
 func (mux *Trie) Find(key string) (string, http.HandlerFunc) {
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
-	res := strings.Split(pattern, "/")
+	res := strings.Split(pattern, mux.pattern)
 	path := ""
 	var han http.HandlerFunc
 	var method string

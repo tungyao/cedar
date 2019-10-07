@@ -16,5 +16,5 @@ func TestR(t *testing.T) {
 	r.GetR("user.add", func(writer http.ResponseWriter, request *http.Request) {
 		_, _ = fmt.Fprintln(writer, "hello")
 	})
-	//http.ListenAndServe(":80", r)
+	http.ListenAndServe(":80", r)
 }
