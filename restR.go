@@ -8,6 +8,7 @@ import (
 type RestConfig struct {
 	EntryPath string
 	ApiName   string
+	Pattern   string
 }
 type _rest struct {
 	trie   Trie
@@ -20,6 +21,7 @@ func NewRestRouter(rc RestConfig) *_rest {
 		root: NewSon("GET", rc.EntryPath+"?"+rc.ApiName+"=", func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = fmt.Fprint(writer, "index")
 		}, 1),
+		pattern: rc.Pattern,
 	}, config: rc,
 	}
 }

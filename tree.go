@@ -7,8 +7,9 @@ import (
 )
 
 type Trie struct {
-	num  int64
-	root *Son
+	num     int64
+	pattern string
+	root    *Son
 }
 type Son struct {
 	key      string // /a
@@ -36,12 +37,14 @@ func NewRouter() *Trie {
 		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = fmt.Fprint(writer, "index")
 		}, 1),
+		pattern: "/",
 	}
 }
 func (mux *Trie) Insert(method string, path string, handler http.HandlerFunc) {
 	son := mux.root //son 是指针，不是普通变量
 	pattern := strings.TrimPrefix(path, "/")
-	res := strings.Split(pattern, "/")
+	res := strings.Split(pattern, mux.pattern)
+	fmt.Println(res)
 	if son.key != path { //匹配不成功才加入链表
 		for _, key := range res { //遍历数组
 			if son.child[key] == nil { //第一个son节点是不是空 ，如果是数据和节点key放进去
