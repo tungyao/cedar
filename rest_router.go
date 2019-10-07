@@ -14,6 +14,10 @@ type _rest struct {
 	trie   Trie
 	config RestConfig
 }
+type GroupR struct {
+	tree *_rest
+	path string
+}
 
 func NewRestRouter(rc RestConfig) *_rest {
 	return &_rest{trie: Trie{
@@ -29,13 +33,31 @@ func (re *_rest) GetR(api string, fn http.HandlerFunc) {
 	re.trie.Insert("GET", api, fn)
 }
 func (re *_rest) PostR(api string, fn http.HandlerFunc) {
-	re.trie.Insert("Post", api, fn)
+	re.trie.Insert("POST", api, fn)
 }
 func (re *_rest) PutR(api string, fn http.HandlerFunc) {
-	re.trie.Insert("Put", api, fn)
+	re.trie.Insert("PUT", api, fn)
 }
 func (re *_rest) DeleteR(api string, fn http.HandlerFunc) {
-	re.trie.Insert("Delete", api, fn)
+	re.trie.Insert("DELETE", api, fn)
+}
+func (mux *_rest) GroupR(path string, fn func(groups *GroupR)) {
+	g := new(GroupR)
+	g.tree = mux
+	g.path = path
+	fn(g)
+}
+func (mux *GroupR) GetR(path string, fun http.HandlerFunc) {
+	mux.tree.trie.Get(mux.path+mux.tree.config.Pattern+path, fun)
+}
+func (mux *GroupR) PostR(path string, fun http.HandlerFunc) {
+	mux.tree.trie.Post(mux.path+mux.tree.config.Pattern+path, fun)
+}
+func (mux *GroupR) PutR(path string, fun http.HandlerFunc) {
+	mux.tree.trie.Put(mux.path+mux.tree.config.Pattern+path, fun)
+}
+func (mux *GroupR) DeleteR(path string, fun http.HandlerFunc) {
+	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun)
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
