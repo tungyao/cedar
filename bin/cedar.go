@@ -42,7 +42,7 @@ func createDir(dir string) {
 	}
 }
 func createFile(path string, str string) {
-	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 0755)
+	f, err := os.OpenFile(path, os.O_CREATE|os.O_APPEND, 755)
 	if err != nil {
 		panic("open file err")
 	}

@@ -2,6 +2,7 @@ package cedar
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -61,6 +62,7 @@ func (mux *GroupR) DeleteR(path string, fun http.HandlerFunc) {
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
+	log.Println(r.Method)
 	if fun == nil || r.Method != me || r.URL.Path != "/"+re.config.EntryPath {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
