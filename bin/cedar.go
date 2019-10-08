@@ -55,7 +55,7 @@ func createFile(path string, str string) {
 func main() {
 	flag.Parse()
 	var yes bool
-	_, err := os.Stat(p + "/" + f)
+	_, err := os.Stat(p + "/" + f + ".go")
 	if err != nil {
 		if os.IsNotExist(err) {
 			yes = true
