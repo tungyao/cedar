@@ -2,9 +2,15 @@ package cedar
 
 import (
 	"fmt"
+	"github.com/tungyao/yell"
 	"net/http"
 	"strings"
 )
+
+var log = yell.New(yell.Config{
+	Path:     "/var/log",
+	FileName: "cedar",
+}, "[normal]")
 
 type Trie struct {
 	num     int64

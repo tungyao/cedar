@@ -32,6 +32,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	me, fun := mux.Find(r.URL.Path)
+	log.Println(r.Method, me, r.URL.Path)
 	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
