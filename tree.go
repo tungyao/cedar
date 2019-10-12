@@ -10,7 +10,7 @@ import (
 var log = yell.New(yell.Config{
 	Path:     "/var/log",
 	FileName: "cedar",
-}, "[normal]")
+}, "[cedar]")
 
 type Trie struct {
 	num     int64
