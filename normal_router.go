@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-var FileType = map[string]string{"css": "text/css"}
+var FileType = map[string]string{"css": "text/css", "txt": "text/plain","zip":"application/x-zip-compressed"}
 
 type Groups struct {
 	tree *Trie
@@ -18,13 +18,22 @@ type Groups struct {
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", FileType[filename[1]])
-	if f, err := os.Open("." + path); err == nil {
-		data, _ := ioutil.ReadAll(f)
-		_, _ = w.Write(data)
+	w.Header().Set("Charset", "GBK")
+	fs,err:=os.OpenFile("."+path, os.O_RDONLY, 0666)
+	if err !=nil {
+	    log.Println(err)
+	}
+	data, err := ioutil.ReadAll(fs)
+	if err !=nil {
+	    log.Println(err)
+	}
+	_, err = w.Write(data)
+	if err !=nil {
+	    log.Println(err)
 	}
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	reg := regexp.MustCompile(`^/static[/\w]*\.\w+$`)
+	reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)
 	file := reg.FindStringSubmatch(r.URL.String())
 	if len(file) != 0 {
 		filename := strings.Split(file[0], ".")
@@ -32,9 +41,9 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	me, fun := mux.Find(r.URL.Path)
-	log.Println(r.Method, me, r.URL.Path)
 	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")
+		w.Header().Set("charset", "UTF-8")
 		w.WriteHeader(404)
 		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
 		return
