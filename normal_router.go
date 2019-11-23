@@ -3,13 +3,12 @@ package cedar
 import (
 	"errors"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
-	"regexp"
-	"strings"
 )
 
-var FileType = map[string]string{"css": "text/css", "txt": "text/plain","zip":"application/x-zip-compressed"}
+var FileType = map[string]string{"css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed"}
 
 type Groups struct {
 	tree *Trie
@@ -19,27 +18,32 @@ type Groups struct {
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", FileType[filename[1]])
 	w.Header().Set("Charset", "GBK")
-	fs,err:=os.OpenFile("."+path, os.O_RDONLY, 0666)
-	if err !=nil {
-	    log.Println(err)
+	fs, err := os.OpenFile("."+path, os.O_RDONLY, 0666)
+	if err != nil {
+		log.Println(err)
 	}
 	data, err := ioutil.ReadAll(fs)
-	if err !=nil {
-	    log.Println(err)
+	if err != nil {
+		log.Println(err)
 	}
 	_, err = w.Write(data)
-	if err !=nil {
-	    log.Println(err)
+	if err != nil {
+		log.Println(err)
 	}
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)
-	file := reg.FindStringSubmatch(r.URL.String())
-	if len(file) != 0 {
-		filename := strings.Split(file[0], ".")
+	//reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)
+	//file := reg.FindStringSubmatch(r.URL.String())
+	if r.URL.Path[1:7] == "static" {
+		filename := SplitString([]byte(r.URL.Path[9:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
+	//if len(file) != 0 {
+	//	filename := strings.Split(file[0], ".")
+	//	writeStaticFile(r.URL.Path, filename, w)
+	//	return
+	//}
 	me, fun := mux.Find(r.URL.Path)
 	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")

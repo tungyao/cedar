@@ -2,15 +2,10 @@ package cedar
 
 import (
 	"fmt"
-	"github.com/tungyao/yell"
+	_ "log"
 	"net/http"
 	"strings"
 )
-
-var log = yell.New(yell.Config{
-	Path:     "/var/log",
-	FileName: "cedar",
-}, "[cedar]")
 
 type Trie struct {
 	num     int64
@@ -89,4 +84,24 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc) {
 		return son.method, son.handler
 	}
 	return method, han
+}
+func SplitString(str []byte, p []byte) []string {
+	group := make([]string, 0)
+	for i := 0; i < len(str); i++ {
+		if str[i] == p[0] && i < len(str)-len(p) {
+			if len(p) == 1 {
+				return []string{string(str[:i]), string(str[i+1:])}
+			} else {
+				for j := 1; j < len(p); i++ {
+					if str[i+j] != p[j] {
+						continue
+					}
+					return []string{string(str[:i]), string(str[i+len(p):])}
+				}
+			}
+		} else {
+			continue
+		}
+	}
+	return group
 }

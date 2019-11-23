@@ -2,6 +2,7 @@ package cedar
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -47,6 +48,9 @@ func (mux *_rest) GroupR(path string, fn func(groups *GroupR)) {
 	g.path = path
 	fn(g)
 }
+func (mux *_rest) Static(filepath string) {
+	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
+}
 func (mux *GroupR) GetR(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Get(mux.path+mux.tree.config.Pattern+path, fun)
 }
@@ -60,6 +64,11 @@ func (mux *GroupR) DeleteR(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun)
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path[1:7] == "static" {
+		filename := SplitString([]byte(r.URL.Path[9:]), []byte("."))
+		writeStaticFile(r.URL.Path, filename, w)
+		return
+	}
 	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
 	log.Println(r.Method, me, r.URL.Query().Get(re.config.ApiName))
 	if fun == nil || r.Method != me || r.URL.Path != "/"+re.config.EntryPath {

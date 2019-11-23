@@ -26,3 +26,10 @@ func TestR(t *testing.T) {
 	})
 	http.ListenAndServe(":80", r)
 }
+func TestRR(t *testing.T) {
+	r := cedar.NewRouter()
+	r.Get("/a", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Fprint(writer, "hello")
+	})
+	r.Listening(":80", r)
+}
