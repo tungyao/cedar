@@ -42,13 +42,13 @@ func (re *_rest) PutR(api string, fn http.HandlerFunc) {
 func (re *_rest) DeleteR(api string, fn http.HandlerFunc) {
 	re.trie.Insert("DELETE", api, fn)
 }
-func (mux *_rest) GroupR(path string, fn func(groups *GroupR)) {
+func (re *_rest) GroupR(path string, fn func(groups *GroupR)) {
 	g := new(GroupR)
-	g.tree = mux
+	g.tree = re
 	g.path = path
 	fn(g)
 }
-func (mux *_rest) Static(filepath string) {
+func (re *_rest) Static(filepath string) {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
 }
 func (mux *GroupR) GetR(path string, fun http.HandlerFunc) {

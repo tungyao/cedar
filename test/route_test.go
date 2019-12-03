@@ -4,6 +4,7 @@ import (
 	"../../cedar"
 	"fmt"
 	"net/http"
+	"src/github.com/tungyao/tpool"
 	"testing"
 )
 
@@ -32,4 +33,14 @@ func TestRR(t *testing.T) {
 		fmt.Fprint(writer, "hello")
 	})
 	r.Listening(":80", r)
+	e := tpool.NewTask(func() error {
+		return nil
+	})
+	p := tpool.NewPool(1000)
+	go func() {
+		for {
+			p.EntryChannel <- e
+		}
+	}()
+	p.Run()
 }

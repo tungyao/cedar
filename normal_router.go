@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-var FileType = map[string]string{"css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed"}
+var FileType = map[string]string{"css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
 
 type Groups struct {
 	tree *Trie
@@ -17,7 +17,7 @@ type Groups struct {
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	w.Header().Set("Content-Type", FileType[filename[1]])
-	w.Header().Set("Charset", "GBK")
+	w.Header().Set("Charset", "UTF-8")
 	fs, err := os.OpenFile("."+path, os.O_RDONLY, 0666)
 	if err != nil {
 		log.Println(err)
@@ -26,7 +26,17 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	if err != nil {
 		log.Println(err)
 	}
-	_, err = w.Write(data)
+	if pusher, ok := w.(http.Pusher); ok {
+		// Push is supported.
+		//options := &http.PushOptions{
+		//	Header: http.Header{
+		//		"Accept-Encoding": ,
+		//	},
+		//}
+		if err := pusher.Push("/app.js", nil); err != nil {
+			_, err = w.Write(data)
+		}
+	}
 	if err != nil {
 		log.Println(err)
 	}
@@ -34,6 +44,9 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)
 	//file := reg.FindStringSubmatch(r.URL.String())
+	if len(r.URL.Path) < 7 {
+		goto bacall
+	}
 	if r.URL.Path[1:7] == "static" {
 		filename := SplitString([]byte(r.URL.Path[9:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
@@ -44,6 +57,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	writeStaticFile(r.URL.Path, filename, w)
 	//	return
 	//}
+bacall:
 	me, fun := mux.Find(r.URL.Path)
 	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")
