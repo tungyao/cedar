@@ -8,7 +8,7 @@ import (
 	"os"
 )
 
-var FileType = map[string]string{"css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
+var FileType = map[string]string{"html": "text/html", "css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
 
 type Groups struct {
 	tree *Trie
@@ -43,21 +43,14 @@ end:
 	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)
-	//file := reg.FindStringSubmatch(r.URL.String())
 	if len(r.URL.Path) < 7 {
 		goto bacall
 	}
 	if r.URL.Path[1:7] == "static" {
-		filename := SplitString([]byte(r.URL.Path[9:]), []byte("."))
+		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
-	//if len(file) != 0 {
-	//	filename := strings.Split(file[0], ".")
-	//	writeStaticFile(r.URL.Path, filename, w)
-	//	return
-	//}
 bacall:
 	me, fun := mux.Find(r.URL.Path)
 	if fun == nil || r.Method != me {
@@ -76,6 +69,9 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g.tree = mux
 	g.path = path
 	fn(g)
+}
+func (mux *Trie) Template(w http.ResponseWriter, path string) {
+	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
 func (mux *Groups) Get(path string, fun http.HandlerFunc) {
 	mux.tree.Get(mux.path+path, fun)

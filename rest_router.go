@@ -2,7 +2,6 @@ package cedar
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -31,47 +30,49 @@ func NewRestRouter(rc RestConfig) *_rest {
 	}, config: rc,
 	}
 }
-func (re *_rest) GetR(api string, fn http.HandlerFunc) {
+func (re *_rest) Get(api string, fn http.HandlerFunc) {
 	re.trie.Insert("GET", api, fn)
 }
-func (re *_rest) PostR(api string, fn http.HandlerFunc) {
+func (re *_rest) Post(api string, fn http.HandlerFunc) {
 	re.trie.Insert("POST", api, fn)
 }
-func (re *_rest) PutR(api string, fn http.HandlerFunc) {
+func (re *_rest) Put(api string, fn http.HandlerFunc) {
 	re.trie.Insert("PUT", api, fn)
 }
-func (re *_rest) DeleteR(api string, fn http.HandlerFunc) {
+func (re *_rest) Delete(api string, fn http.HandlerFunc) {
 	re.trie.Insert("DELETE", api, fn)
 }
-func (re *_rest) GroupR(path string, fn func(groups *GroupR)) {
+func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g := new(GroupR)
 	g.tree = re
 	g.path = path
 	fn(g)
 }
+func (re *_rest) Template(w http.ResponseWriter, path string) {
+	writeStaticFile(path+".html", []string{"", "html"}, w)
+}
 func (re *_rest) Static(filepath string) {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
 }
-func (mux *GroupR) GetR(path string, fun http.HandlerFunc) {
+func (mux *GroupR) Get(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Get(mux.path+mux.tree.config.Pattern+path, fun)
 }
-func (mux *GroupR) PostR(path string, fun http.HandlerFunc) {
+func (mux *GroupR) Post(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Post(mux.path+mux.tree.config.Pattern+path, fun)
 }
-func (mux *GroupR) PutR(path string, fun http.HandlerFunc) {
+func (mux *GroupR) Put(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Put(mux.path+mux.tree.config.Pattern+path, fun)
 }
-func (mux *GroupR) DeleteR(path string, fun http.HandlerFunc) {
+func (mux *GroupR) Delete(path string, fun http.HandlerFunc) {
 	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun)
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path[1:7] == "static" {
+	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
 		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
 	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
-	log.Println(r.Method, me, r.URL.Query().Get(re.config.ApiName))
 	if fun == nil || r.Method != me || r.URL.Path != "/"+re.config.EntryPath {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
