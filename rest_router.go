@@ -14,6 +14,7 @@ type _rest struct {
 	trie   Trie
 	config RestConfig
 	static string
+	index  string
 }
 type GroupR struct {
 	tree *_rest
@@ -29,6 +30,9 @@ func NewRestRouter(rc RestConfig) *_rest {
 		pattern: rc.Pattern,
 	}, config: rc,
 	}
+}
+func (re *_rest) Index(api string) {
+	re.index = api
 }
 func (re *_rest) Get(api string, fn http.HandlerFunc) {
 	re.trie.Insert("GET", api, fn)
@@ -72,14 +76,16 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
+
 	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
-	if fun == nil || r.Method != me || r.URL.Path != "/"+re.config.EntryPath {
+	if r.URL.Path == "/" {
+		me, fun = re.trie.Find(re.index)
+	}
+	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
 		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
 		return
 	}
-	if fun != nil {
-		fun(w, r)
-	}
+	fun(w, r)
 }
