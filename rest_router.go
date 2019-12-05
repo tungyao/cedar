@@ -14,6 +14,7 @@ type RestConfig struct {
 type _rest struct {
 	trie   Trie
 	config RestConfig
+	static string
 }
 type GroupR struct {
 	tree *_rest
@@ -65,7 +66,7 @@ func (mux *GroupR) DeleteR(path string, fun http.HandlerFunc) {
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path[1:7] == "static" {
-		filename := SplitString([]byte(r.URL.Path[9:]), []byte("."))
+		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}

@@ -16,8 +16,22 @@ type Groups struct {
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
+
+	if pusher, ok := w.(http.Pusher); ok {
+		//Push is supported.
+		options := &http.PushOptions{
+			Header: http.Header{
+				"Accept-Encoding": {"Content-Type:" + FileType[filename[1]]},
+			},
+		}
+		if err := pusher.Push("."+path, options); err != nil {
+			goto end
+		}
+	} else {
+		goto end
+	}
+end:
 	w.Header().Set("Content-Type", FileType[filename[1]])
-	w.Header().Set("Charset", "UTF-8")
 	fs, err := os.OpenFile("."+path, os.O_RDONLY, 0666)
 	if err != nil {
 		log.Println(err)
@@ -26,20 +40,7 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	if err != nil {
 		log.Println(err)
 	}
-	if pusher, ok := w.(http.Pusher); ok {
-		// Push is supported.
-		//options := &http.PushOptions{
-		//	Header: http.Header{
-		//		"Accept-Encoding": ,
-		//	},
-		//}
-		if err := pusher.Push("/app.js", nil); err != nil {
-			_, err = w.Write(data)
-		}
-	}
-	if err != nil {
-		log.Println(err)
-	}
+	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//reg := regexp.MustCompile(`^/static[/\w-]*\.\w+$`)

@@ -8,7 +8,7 @@ r.Get("/",http.HandlerFunc())
 r.Post("/",http.HandlerFunc())
 r.Put("/",http.HandlerFunc())
 r.Delete("/",http.HandlerFunc())
-r.Static(static dir path)
+r.Static("./static/")
 ```
 Group
 ```
