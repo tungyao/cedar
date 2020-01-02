@@ -9,19 +9,20 @@ import (
 
 func TestR(t *testing.T) {
 	r := cedar.NewRestRouter(cedar.RestConfig{
-		EntryPath: "wechat",
+		EntryPath: "blog",
 		ApiName:   "api",
 		Pattern:   ".",
 	})
 	r.Static("./static/")
-	r.GetR("user.add", func(writer http.ResponseWriter, request *http.Request) {
-		_, _ = fmt.Fprintln(writer, "hello")
+	r.Index("user")
+	r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
+		r.Template(writer, "/index")
 	})
-	r.GroupR("test", func(groups *cedar.GroupR) {
-		groups.GetR("one", func(writer http.ResponseWriter, request *http.Request) {
+	r.Group("test", func(groups *cedar.GroupR) {
+		groups.Get("one", func(writer http.ResponseWriter, request *http.Request) {
 			fmt.Fprintln(writer, "test.one")
 		})
-		groups.PutR("two", func(writer http.ResponseWriter, request *http.Request) {
+		groups.Post("two", func(writer http.ResponseWriter, request *http.Request) {
 			fmt.Fprintln(writer, "test.two")
 		})
 	})
