@@ -26,7 +26,7 @@ func NewRestRouter(rc RestConfig) *_rest {
 		num: 1,
 		root: NewSon("GET", rc.EntryPath+"?"+rc.ApiName+"=", func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = fmt.Fprint(writer, "index")
-		}, 1),
+		}, nil, 1),
 		pattern: rc.Pattern,
 	}, config: rc,
 	}
@@ -34,17 +34,17 @@ func NewRestRouter(rc RestConfig) *_rest {
 func (re *_rest) Index(api string) {
 	re.index = api
 }
-func (re *_rest) Get(api string, fn http.HandlerFunc) {
-	re.trie.Insert("GET", api, fn)
+func (re *_rest) Get(api string, fn http.HandlerFunc, fnd http.Handler) {
+	re.trie.Insert("GET", api, fn, fnd)
 }
-func (re *_rest) Post(api string, fn http.HandlerFunc) {
-	re.trie.Insert("POST", api, fn)
+func (re *_rest) Post(api string, fn http.HandlerFunc, fnd http.Handler) {
+	re.trie.Insert("POST", api, fn, fnd)
 }
-func (re *_rest) Put(api string, fn http.HandlerFunc) {
-	re.trie.Insert("PUT", api, fn)
+func (re *_rest) Put(api string, fn http.HandlerFunc, fnd http.Handler) {
+	re.trie.Insert("PUT", api, fn, fnd)
 }
-func (re *_rest) Delete(api string, fn http.HandlerFunc) {
-	re.trie.Insert("DELETE", api, fn)
+func (re *_rest) Delete(api string, fn http.HandlerFunc, fnd http.Handler) {
+	re.trie.Insert("DELETE", api, fn, fnd)
 }
 func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g := new(GroupR)
@@ -58,17 +58,17 @@ func (re *_rest) Template(w http.ResponseWriter, path string) {
 func (re *_rest) Static(filepath string) {
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
 }
-func (mux *GroupR) Get(path string, fun http.HandlerFunc) {
-	mux.tree.trie.Get(mux.path+mux.tree.config.Pattern+path, fun)
+func (mux *GroupR) Get(path string, fun http.HandlerFunc, fnd http.Handler) {
+	mux.tree.trie.Get(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
-func (mux *GroupR) Post(path string, fun http.HandlerFunc) {
-	mux.tree.trie.Post(mux.path+mux.tree.config.Pattern+path, fun)
+func (mux *GroupR) Post(path string, fun http.HandlerFunc, fnd http.Handler) {
+	mux.tree.trie.Post(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
-func (mux *GroupR) Put(path string, fun http.HandlerFunc) {
-	mux.tree.trie.Put(mux.path+mux.tree.config.Pattern+path, fun)
+func (mux *GroupR) Put(path string, fun http.HandlerFunc, fnd http.Handler) {
+	mux.tree.trie.Put(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
-func (mux *GroupR) Delete(path string, fun http.HandlerFunc) {
-	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun)
+func (mux *GroupR) Delete(path string, fun http.HandlerFunc, fnd http.Handler) {
+	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
@@ -77,9 +77,9 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	me, fun := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
+	me, fun, _ := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
 	if r.URL.Path == "/" {
-		me, fun = re.trie.Find(re.index)
+		me, fun, _ = re.trie.Find(re.index)
 	}
 	if fun == nil || r.Method != me {
 		w.Header().Set("Content-type", "text/html")
@@ -88,4 +88,5 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fun(w, r)
+
 }

@@ -1,9 +1,9 @@
 package test
 
 import (
-	"../../cedar"
 	"fmt"
 	"net/http"
+	"src/github.com/tungyao/cedar"
 	"testing"
 )
 
@@ -15,6 +15,7 @@ func TestR(t *testing.T) {
 	})
 	r.Static("./static/")
 	r.Index("user")
+
 	r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
 		r.Template(writer, "/index")
 	})

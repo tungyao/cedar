@@ -1,7 +1,7 @@
 package cedar
 
 import (
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -43,27 +43,30 @@ end:
 	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if len(r.URL.Path) < 7 {
-		goto bacall
-	}
-	if r.URL.Path[1:7] == "static" {
-		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
-		writeStaticFile(r.URL.Path, filename, w)
-		return
-	}
-bacall:
-	me, fun := mux.Find(r.URL.Path)
-	if fun == nil || r.Method != me {
+	//if r.URL.Path[1:7] == "static" {
+	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
+	//	writeStaticFile(r.URL.Path, filename, w)
+	//	return
+	//}
+	me, handf, hand := mux.Find(r.URL.Path)
+	fmt.Println(hand)
+	fmt.Println(me)
+	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
 		w.WriteHeader(404)
 		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
 		return
 	}
-	if fun != nil {
-		fun(w, r)
+	if hand != nil {
+
 	}
+	if handf != nil {
+		handf(w, r)
+	}
+
 }
+
 func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
 	g.tree = mux
@@ -73,46 +76,32 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
-func (mux *Groups) Get(path string, fun http.HandlerFunc) {
-	mux.tree.Get(mux.path+path, fun)
+func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Get(mux.path+path, handlerFunc, handlerFunc)
 }
-func (mux *Groups) Post(path string, fun http.HandlerFunc) {
-	mux.tree.Post(mux.path+path, fun)
+func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Post(mux.path+path, handlerFunc, handler)
 }
-func (mux *Groups) Put(path string, fun http.HandlerFunc) {
-	mux.tree.Put(mux.path+path, fun)
+func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Put(mux.path+path, handlerFunc, handler)
 }
-func (mux *Groups) Delete(path string, fun http.HandlerFunc) {
-	mux.tree.Delete(mux.path+path, fun)
+func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Delete(mux.path+path, handlerFunc, handler)
 }
 
-func (mux *Trie) Get(path string, fun http.HandlerFunc) {
-	mux.Insert(http.MethodGet, path, fun)
+func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodGet, path, handlerFunc, handler)
 }
-func (mux *Trie) Post(path string, fun http.HandlerFunc) {
-	mux.Insert(http.MethodPost, path, fun)
+func (mux *Trie) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodPost, path, handlerFunc, handler)
 }
-func (mux *Trie) Put(path string, fun http.HandlerFunc) {
-	mux.Insert(http.MethodPut, path, fun)
+func (mux *Trie) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodPut, path, handlerFunc, handler)
 }
-func (mux *Trie) Delete(path string, fun http.HandlerFunc) {
-	mux.Insert(http.MethodDelete, path, fun)
+func (mux *Trie) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodDelete, path, handlerFunc, handler)
 }
 func (mux *Trie) Static(filepath string) {
+	log.Println(1)
 	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
-}
-func (mux *Trie) Listening(parameter ...interface{}) error {
-	if len(parameter) != 2 && len(parameter) != 4 {
-		return errors.New("parameter length must is 2 or 4")
-	}
-	if len(parameter) == 2 {
-		if ok := http.ListenAndServe(parameter[0].(string), parameter[1].(http.Handler)); ok != nil {
-			return ok
-		}
-	} else {
-		if ok := http.ListenAndServeTLS(parameter[0].(string), parameter[1].(string), parameter[2].(string), parameter[3].(http.Handler)); ok != nil {
-			return ok
-		}
-	}
-	return nil
 }
