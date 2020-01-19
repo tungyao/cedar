@@ -49,6 +49,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	me, handf, hand := mux.Find(r.URL.Path)
+	fmt.Println(r.URL.Path)
 	fmt.Println(hand)
 	fmt.Println(me)
 	if r.Method != me {
@@ -59,7 +60,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if hand != nil {
-
+		hand.ServeHTTP(w, r)
 	}
 	if handf != nil {
 		handf(w, r)
