@@ -1,7 +1,6 @@
 package cedar
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -49,9 +48,6 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	me, handf, hand := mux.Find(r.URL.Path)
-	fmt.Println(r.URL.Path)
-	fmt.Println(hand)
-	fmt.Println(me)
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
@@ -101,8 +97,4 @@ func (mux *Trie) Put(path string, handlerFunc http.HandlerFunc, handler http.Han
 }
 func (mux *Trie) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.Insert(http.MethodDelete, path, handlerFunc, handler)
-}
-func (mux *Trie) Static(filepath string) {
-	log.Println(1)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
 }

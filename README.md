@@ -1,14 +1,16 @@
 Router on prefix tree lookup algorithm 😀  
 ---
+# all structure
+**cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
+> Only one can take effect
 # Example
 Normal
 ```
 r := cedar.NewRouter()
-r.Get("/",http.HandlerFunc())
-r.Post("/",http.HandlerFunc())
-r.Put("/",http.HandlerFunc())
-r.Delete("/",http.HandlerFunc())
-r.Static("./static/")
+r.Get("/",http.HandlerFunc(),nil)
+r.Post("/",http.HandlerFunc(),nil)
+r.Put("/",http.HandlerFunc(),nil)
+r.Delete("/",http.HandlerFunc(),nil)
 ```
 Group
 ```
@@ -21,7 +23,7 @@ r.Group("/",func (group *cedar.Groups){
 RestFul 
 ```go
 r := cedar.NewRestRouter(cedar.RestConfig{
-		EntryPath: "wechat",
+		EntryPath: "yashua",
 		ApiName:   "api",
         Pattern:"." `new*`
 
