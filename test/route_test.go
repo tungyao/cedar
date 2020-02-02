@@ -3,37 +3,53 @@ package test
 import (
 	"../../cedar"
 	"fmt"
-	"golang.org/x/net/websocket"
-	"html/template"
+
+	//"golang.org/x/net/websocket"
 	"net/http"
-	"strings"
 	"testing"
 )
 
-func upper(ws *websocket.Conn) {
-	var err error
-	for {
-		var reply string
-
-		if err = websocket.Message.Receive(ws, &reply); err != nil {
-			fmt.Println(err)
-			continue
-		}
-
-		if err = websocket.Message.Send(ws, strings.ToUpper(reply)); err != nil {
-			fmt.Println(err)
-			continue
-		}
-	}
-}
+//func upper(ws *websocket.Conn) {
+//	var err error
+//	for {
+//		var reply string
+//
+//		if err = websocket.Message.Receive(ws, &reply); err != nil {
+//			fmt.Println(err)
+//			continue
+//		}
+//
+//		if err = websocket.Message.Send(ws, strings.ToUpper(reply)); err != nil {
+//			fmt.Println(err)
+//			continue
+//		}
+//	}
+//}
 func TestR(t *testing.T) {
 	r := cedar.NewRouter()
 	//r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	r.Get("/websocket", nil, websocket.Handler(upper))
-	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		t, _ := template.ParseFiles("./static/socket.html")
-		t.Execute(writer, nil)
+	//r.Get("/websocket", nil, websocket.Handler(upper))
+	//r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	//	t, _ := template.ParseFiles("./static/socket.html")
+	//	t.Execute(writer, nil)
+	//}, nil)
+	r.Get("/k", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("helloxxx"))
 	}, nil)
+	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("helloxxxkk"))
+	}, nil)
+	r.Group("/a", func(groups *cedar.Groups) {
+		groups.Group("/b", func(groups *cedar.Groups) {
+			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
+				fmt.Println(1)
+				writer.Write([]byte("hello"))
+			}, nil)
+		})
+		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
+			r.Template(writer, "/index")
+		}, nil)
+	})
 	http.ListenAndServe(":80", r)
 	//r := cedar.NewRestRouter(cedar.RestConfig{
 	//	EntryPath: "blog",

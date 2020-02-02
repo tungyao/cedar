@@ -2,6 +2,7 @@ package cedar
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -70,6 +71,12 @@ func (mux *GroupR) Put(path string, fun http.HandlerFunc, fnd http.Handler) {
 func (mux *GroupR) Delete(path string, fun http.HandlerFunc, fnd http.Handler) {
 	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
+func (mux *GroupR) Group(path string, fn func(groups *GroupR)) {
+	g := new(GroupR)
+	g.path = mux.path + path
+	g.tree = mux.tree
+	fn(g)
+}
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
 	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
@@ -77,13 +84,14 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	me, handf, hand := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
+	log.Println(me, r.URL.Path)
 	if r.URL.Path == "/" {
 		me, handf, hand = re.trie.Find(re.index)
 	}
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
+		_, _ = w.Write([]byte("<span style=\"font-size=500px\">404</span>"))
 		return
 	}
 	if hand != nil {

@@ -16,7 +16,10 @@ Group
 ```
 r := cedar.NewRouter()
 r.Group("/",func (group *cedar.Groups){
-    group.Get("/",http.HandlerFunc())
+    group.Get("/",http.HandlerFunc(),nil)
+    group.Group("/x",func(groups *cedar.Groups) {
+        group.Get("/x",http.HandlerFunc(),nil)
+    })
 })
 ```
 ---
@@ -28,12 +31,12 @@ r := cedar.NewRestRouter(cedar.RestConfig{
         Pattern:"." `new*`
 
 })
-r.GetR(api,fn)
-r.PostR(api,fn)
-r.PutR(api,fn)
-r.DeleteR(api,fn)
-r.GroupR(path,func(groups *cedar.GroupR{
-    r.GetR(api,fn)
+r.Get(api,fn,handler)
+r.Post(api,fn,handler)
+r.Put(api,fn,handler)
+r.Delete(api,fn,handler)
+r.Group(path,func(groups *cedar.Group{
+    r.Get(api,fn,handler)
 })
 ```
 # exp

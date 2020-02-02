@@ -48,11 +48,12 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	//	return
 	//}
 	me, handf, hand := mux.Find(r.URL.Path)
+	log.Println(me, r.URL.Path)
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
+		_, _ = w.Write([]byte("<span style=\"font-size=500px\">404</span>"))
 		return
 	}
 	if hand != nil {
@@ -74,7 +75,7 @@ func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Get(mux.path+path, handlerFunc, handlerFunc)
+	mux.tree.Get(mux.path+path, handlerFunc, handler)
 }
 func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Post(mux.path+path, handlerFunc, handler)
@@ -85,7 +86,12 @@ func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.H
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Delete(mux.path+path, handlerFunc, handler)
 }
-
+func (mux *Groups) Group(path string, fn func(groups *Groups)) {
+	g := new(Groups)
+	g.path = mux.path + path
+	g.tree = mux.tree
+	fn(g)
+}
 func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.Insert(http.MethodGet, path, handlerFunc, handler)
 }
