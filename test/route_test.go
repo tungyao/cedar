@@ -2,8 +2,6 @@ package test
 
 import (
 	"../../cedar"
-	"fmt"
-
 	//"golang.org/x/net/websocket"
 	"net/http"
 	"testing"
@@ -27,7 +25,7 @@ import (
 //}
 func TestR(t *testing.T) {
 	r := cedar.NewRouter()
-	//r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	//r.Get("/websocket", nil, websocket.Handler(upper))
 	//r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 	//	t, _ := template.ParseFiles("./static/socket.html")
@@ -42,8 +40,10 @@ func TestR(t *testing.T) {
 	r.Group("/a", func(groups *cedar.Groups) {
 		groups.Group("/b", func(groups *cedar.Groups) {
 			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
-				fmt.Println(1)
-				writer.Write([]byte("hello"))
+				writer.Write([]byte("hellocc"))
+			}, nil)
+			groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
+				writer.Write([]byte("hellodd"))
 			}, nil)
 		})
 		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {

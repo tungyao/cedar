@@ -42,11 +42,11 @@ end:
 	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//if r.URL.Path[1:7] == "static" {
-	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
-	//	writeStaticFile(r.URL.Path, filename, w)
-	//	return
-	//}
+	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
+		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
+		writeStaticFile(r.URL.Path, filename, w)
+		return
+	}
 	me, handf, hand := mux.Find(r.URL.Path)
 	log.Println(me, r.URL.Path)
 	if r.Method != me {

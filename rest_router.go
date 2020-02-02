@@ -78,11 +78,11 @@ func (mux *GroupR) Group(path string, fn func(groups *GroupR)) {
 	fn(g)
 }
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
-	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
-	//	writeStaticFile(r.URL.Path, filename, w)
-	//	return
-	//}
+	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
+		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
+		writeStaticFile(r.URL.Path, filename, w)
+		return
+	}
 	me, handf, hand := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
 	log.Println(me, r.URL.Path)
 	if r.URL.Path == "/" {
