@@ -2,6 +2,8 @@ package test
 
 import (
 	"../../cedar"
+	"fmt"
+
 	//"golang.org/x/net/websocket"
 	"net/http"
 	"testing"
@@ -71,4 +73,24 @@ func TestR(t *testing.T) {
 	//	})
 	//})
 	//http.ListenAndServe(":80", r)
+}
+func TestName2(t *testing.T) {
+	r := cedar.NewRestRouter(cedar.RestConfig{
+		EntryPath: "blog",
+		ApiName:   "api",
+		Pattern:   ".",
+	})
+	r.Index("user")
+	r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
+		r.Template(writer, "/index")
+	}, nil)
+	r.Group("test", func(groups *cedar.GroupR) {
+		groups.Get("one", func(writer http.ResponseWriter, request *http.Request) {
+			fmt.Fprintln(writer, "test.one")
+		}, nil)
+		groups.Post("two", func(writer http.ResponseWriter, request *http.Request) {
+			fmt.Fprintln(writer, "test.two")
+		}, nil)
+	})
+	http.ListenAndServe(":80", r)
 }

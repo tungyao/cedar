@@ -41,7 +41,7 @@ r.Group(path,func(groups *cedar.Group{
 ```
 # exp
 ```
-r.GetR("user.add", func(writer http.ResponseWriter, request *http.Request) {
+r.Get("user.add", func(writer http.ResponseWriter, request *http.Request) {
  		_, _ = fmt.Fprintln(writer, "hello")
 })
 ```
