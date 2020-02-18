@@ -1,4 +1,4 @@
-Router on prefix tree lookup algorithm 😀  
+Router on prefix tree algorithm 😀  
 ---
 # all structure
 **cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
