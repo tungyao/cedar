@@ -11,6 +11,9 @@ r.Get("/",http.HandlerFunc(),nil)
 r.Post("/",http.HandlerFunc(),nil)
 r.Put("/",http.HandlerFunc(),nil)
 r.Delete("/",http.HandlerFunc(),nil)
+if err := http.ListenAndServe(":80", r); err != nil {
+	log.Panicln(err)
+}
 ```
 Group
 ```
@@ -21,6 +24,9 @@ r.Group("/",func (group *cedar.Groups){
         group.Get("/x",http.HandlerFunc(),nil)
     })
 })
+if err := http.ListenAndServe(":80", r); err != nil {
+	log.Panicln(err)
+}
 ```
 ---
 RestFul 
