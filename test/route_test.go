@@ -39,6 +39,10 @@ func TestR(t *testing.T) {
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
+	r.Middleware("test", func(r *http.Request) error {
+		fmt.Println("123213")
+		return nil
+	})
 	r.Group("/a", func(groups *cedar.Groups) {
 		groups.Group("/b", func(groups *cedar.Groups) {
 			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
@@ -74,23 +78,24 @@ func TestR(t *testing.T) {
 	//})
 	//http.ListenAndServe(":80", r)
 }
-func TestName2(t *testing.T) {
-	r := cedar.NewRestRouter(cedar.RestConfig{
-		EntryPath: "blog",
-		ApiName:   "api",
-		Pattern:   ".",
-	})
-	r.Index("user")
-	r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
-		r.Template(writer, "/index")
-	}, nil)
-	r.Group("test", func(groups *cedar.GroupR) {
-		groups.Get("one", func(writer http.ResponseWriter, request *http.Request) {
-			fmt.Fprintln(writer, "test.one")
-		}, nil)
-		groups.Post("two", func(writer http.ResponseWriter, request *http.Request) {
-			fmt.Fprintln(writer, "test.two")
-		}, nil)
-	})
-	http.ListenAndServe(":80", r)
-}
+
+//func TestName2(t *testing.T) {
+//	r := cedar.NewRestRouter(cedar.RestConfig{
+//		EntryPath: "blog",
+//		ApiName:   "api",
+//		Pattern:   ".",
+//	})
+//	r.Index("user")
+//	r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
+//		r.Template(writer, "/index")
+//	}, nil)
+//	r.Group("test", func(groups *cedar.GroupR) {
+//		groups.Get("one", func(writer http.ResponseWriter, request *http.Request) {
+//			fmt.Fprintln(writer, "test.one")
+//		}, nil)
+//		groups.Post("two", func(writer http.ResponseWriter, request *http.Request) {
+//			fmt.Fprintln(writer, "test.two")
+//		}, nil)
+//	})
+//	http.ListenAndServe(":80", r)
+//}

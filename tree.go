@@ -8,9 +8,10 @@ import (
 )
 
 type Trie struct {
-	num     int64
-	pattern string
-	root    *Son
+	num        int64
+	pattern    string
+	root       *Son
+	globalFunc []*GlobalFunc
 }
 type Son struct {
 	key         string // /a
@@ -21,6 +22,10 @@ type Son struct {
 	method      string
 	handlerFunc http.HandlerFunc
 	handler     http.Handler
+}
+type GlobalFunc struct {
+	Name string
+	Fn   func(r *http.Request) error
 }
 
 func NewSon(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, deep int) *Son {

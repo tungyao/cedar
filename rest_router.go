@@ -53,6 +53,12 @@ func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g.path = path
 	fn(g)
 }
+func (re *_rest) Middleware(name string, fn func(r *http.Request) error) {
+	re.trie.globalFunc = append(re.trie.globalFunc, &GlobalFunc{
+		Name: name,
+		Fn:   fn,
+	})
+}
 func (re *_rest) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
@@ -83,6 +89,13 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
+	go func() {
+		for k, v := range re.trie.globalFunc {
+			if err := v.Fn(r); err != nil {
+				log.Panicln(k, err)
+			}
+		}
+	}()
 	me, handf, hand := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
 	log.Println(me, r.URL.Path)
 	if r.URL.Path == "/" {

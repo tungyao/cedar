@@ -20,7 +20,7 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 		//Push is supported.
 		options := &http.PushOptions{
 			Header: http.Header{
-				"Accept-Encoding": {"Content-Type:" + FileType[filename[1]]},
+				"Accept-Encoding": {"Content-Type:" + FileType[filename[len(filename)-1]]},
 			},
 		}
 		if err := pusher.Push("."+path, options); err != nil {
@@ -30,7 +30,7 @@ func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 		goto end
 	}
 end:
-	w.Header().Set("Content-Type", FileType[filename[1]])
+	w.Header().Set("Content-Type", FileType[filename[len(filename)-1]])
 	fs, err := os.OpenFile("."+path, os.O_RDONLY, 0666)
 	if err != nil {
 		log.Println(err)
@@ -47,6 +47,13 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
+	go func() {
+		for k, v := range mux.globalFunc {
+			if err := v.Fn(r); err != nil {
+				log.Panicln(k, err)
+			}
+		}
+	}()
 	me, handf, hand := mux.Find(r.URL.Path)
 	log.Println(me, r.URL.Path)
 	if r.Method != me {
@@ -73,6 +80,12 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 }
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
+}
+func (mux *Trie) Middleware(name string, fn func(r *http.Request) error) {
+	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
+		Name: name,
+		Fn:   fn,
+	})
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Get(mux.path+path, handlerFunc, handler)
