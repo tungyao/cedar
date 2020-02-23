@@ -81,7 +81,7 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
-func (mux *Trie) Middleware(name string, fn func(r *http.Request) error) {
+func (mux *Trie) GlobalFunc(name string, fn func(r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,

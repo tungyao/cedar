@@ -7,7 +7,7 @@ Router on prefix tree algorithm 😀
 * Add new function: global function
 >  it can to record logs and so on
  ```go
-r.Middleware("test", func(r *http.Request) error {
+r.GlobalFunc("test", func(r *http.Request) error {
 		fmt.Println("123213")
 		return nil
 })

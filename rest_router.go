@@ -53,7 +53,7 @@ func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g.path = path
 	fn(g)
 }
-func (re *_rest) Middleware(name string, fn func(r *http.Request) error) {
+func (re *_rest) GlobalFunc(name string, fn func(r *http.Request) error) {
 	re.trie.globalFunc = append(re.trie.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,

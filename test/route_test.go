@@ -39,7 +39,7 @@ func TestR(t *testing.T) {
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	r.Middleware("test", func(r *http.Request) error {
+	r.GlobalFunc("test", func(r *http.Request) error {
 		fmt.Println("123213")
 		return nil
 	})
