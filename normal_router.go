@@ -10,8 +10,8 @@ import (
 var FileType = map[string]string{"html": "text/html", "css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
 
 type Groups struct {
-	tree *Trie
-	path string
+	Tree *Trie
+	Path string
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
@@ -74,8 +74,8 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
-	g.tree = mux
-	g.path = path
+	g.Tree = mux
+	g.Path = path
 	fn(g)
 }
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
@@ -88,21 +88,21 @@ func (mux *Trie) GlobalFunc(name string, fn func(r *http.Request) error) {
 	})
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Get(mux.path+path, handlerFunc, handler)
+	mux.Tree.Get(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Post(mux.path+path, handlerFunc, handler)
+	mux.Tree.Post(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Put(mux.path+path, handlerFunc, handler)
+	mux.Tree.Put(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Delete(mux.path+path, handlerFunc, handler)
+	mux.Tree.Delete(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
-	g.path = mux.path + path
-	g.tree = mux.tree
+	g.Path = mux.Path + path
+	g.Tree = mux.Tree
 	fn(g)
 }
 func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
