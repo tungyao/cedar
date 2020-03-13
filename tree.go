@@ -25,7 +25,7 @@ type Son struct {
 }
 type GlobalFunc struct {
 	Name string
-	Fn   func(r *http.Request) error
+	Fn   func(w http.ResponseWriter, r *http.Request) error
 }
 
 func NewSon(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, deep int) *Son {

@@ -49,7 +49,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	go func() {
 		for k, v := range mux.globalFunc {
-			if err := v.Fn(r); err != nil {
+			if err := v.Fn(w, r); err != nil {
 				log.Panicln(k, err)
 			}
 		}
@@ -81,7 +81,7 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
-func (mux *Trie) GlobalFunc(name string, fn func(r *http.Request) error) {
+func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,

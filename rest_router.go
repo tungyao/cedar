@@ -53,7 +53,7 @@ func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g.path = path
 	fn(g)
 }
-func (re *_rest) GlobalFunc(name string, fn func(r *http.Request) error) {
+func (re *_rest) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	re.trie.globalFunc = append(re.trie.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,
@@ -91,7 +91,7 @@ func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	go func() {
 		for k, v := range re.trie.globalFunc {
-			if err := v.Fn(r); err != nil {
+			if err := v.Fn(w, r); err != nil {
 				log.Panicln(k, err)
 			}
 		}
