@@ -1,6 +1,7 @@
 package cedar
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -17,7 +18,7 @@ type Groups struct {
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 
 	if pusher, ok := w.(http.Pusher); ok {
-		// Push is supported.
+		//Push is supported.
 		options := &http.PushOptions{
 			Header: http.Header{
 				"Accept-Encoding": {"Content-Type:" + FileType[filename[1]]},
@@ -42,11 +43,18 @@ end:
 	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// if r.URL.Path[1:7] == "static" {
-	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
-	//	writeStaticFile(r.URL.Path, filename, w)
-	//	return
-	// }
+	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
+		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
+		writeStaticFile(r.URL.Path, filename, w)
+		return
+	}
+	go func() {
+		for k, v := range mux.globalFunc {
+			if err := v.Fn(w, r); err != nil {
+				log.Panicln(k, err)
+			}
+		}
+	}()
 	me, handf, hand := mux.Find(r.URL.Path + r.Method)
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
@@ -73,6 +81,12 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
+func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
+	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
+		Name: name,
+		Fn:   fn,
+	})
+}
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Get(mux.path+path, handlerFunc, handlerFunc)
 }
@@ -90,6 +104,12 @@ func (mux *Groups) PATCH(path string, handlerFunc http.HandlerFunc, handler http
 }
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Delete(mux.path+path, handlerFunc, handler)
+}
+func (mux *Groups) Group(path string, fn func(groups *Groups)) {
+	g := new(Groups)
+	g.Path = mux.Path + path
+	g.Tree = mux.Tree
+	fn(g)
 }
 func (mux *Groups) CONNECT(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Connect(mux.path+path, handlerFunc, handler)

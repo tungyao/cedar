@@ -2,6 +2,7 @@ package cedar
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 )
 
@@ -52,6 +53,12 @@ func (re *_rest) Group(path string, fn func(groups *GroupR)) {
 	g.path = path
 	fn(g)
 }
+func (re *_rest) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
+	re.trie.globalFunc = append(re.trie.globalFunc, &GlobalFunc{
+		Name: name,
+		Fn:   fn,
+	})
+}
 func (re *_rest) Template(w http.ResponseWriter, path string) {
 	writeStaticFile(path+".html", []string{"", "html"}, w)
 }
@@ -70,23 +77,40 @@ func (mux *GroupR) Put(path string, fun http.HandlerFunc, fnd http.Handler) {
 func (mux *GroupR) Delete(path string, fun http.HandlerFunc, fnd http.Handler) {
 	mux.tree.trie.Delete(mux.path+mux.tree.config.Pattern+path, fun, fnd)
 }
+func (mux *GroupR) Group(path string, fn func(groups *GroupR)) {
+	g := new(GroupR)
+	g.path = mux.path + path
+	g.tree = mux.tree
+	fn(g)
+}
 func (re *_rest) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
 		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
-
-	me, fun, _ := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
+	go func() {
+		for k, v := range re.trie.globalFunc {
+			if err := v.Fn(w, r); err != nil {
+				log.Panicln(k, err)
+			}
+		}
+	}()
+	me, handf, hand := re.trie.Find(r.URL.Query().Get(re.config.ApiName))
+	log.Println(me, r.URL.Path)
 	if r.URL.Path == "/" {
-		me, fun, _ = re.trie.Find(re.index)
+		me, handf, hand = re.trie.Find(re.index)
 	}
-	if fun == nil || r.Method != me {
+	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
+		_, _ = w.Write([]byte("<span style=\"font-size=500px\">404</span>"))
 		return
 	}
-	fun(w, r)
-
+	if hand != nil {
+		hand.ServeHTTP(w, r)
+	}
+	if handf != nil {
+		handf(w, r)
+	}
 }

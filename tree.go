@@ -8,9 +8,10 @@ import (
 )
 
 type Trie struct {
-	num     int64
-	pattern string
-	root    *Son
+	num        int64
+	pattern    string
+	root       *Son
+	globalFunc []*GlobalFunc
 }
 type Son struct {
 	key         string // /a
@@ -21,6 +22,10 @@ type Son struct {
 	method      string
 	handlerFunc http.HandlerFunc
 	handler     http.Handler
+}
+type GlobalFunc struct {
+	Name string
+	Fn   func(w http.ResponseWriter, r *http.Request) error
 }
 
 func NewSon(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, deep int) *Son {
@@ -66,22 +71,37 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	son := mux.root // son 是指针，不是普通变量
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
-	if son.key != path { // 匹配不成功才加入链表
-		for _, key := range res { // 遍历数组
-			if son.child[key] == nil { // 第一个son节点是不是空 ，如果是数据和节点key放进去
-				node := NewSon(method, key, handlerFunc, handler, son.deep+1) // 生成新的节点数据
-				node.child = make(map[string]*Son)                            // 初始化该节点的内存
-				node.terminal = false                                         // false 表面 我下面还有节点
-				son.child[key] = node                                         // 将数据放入刚刚初始化的节点
+	tson := mux.root
+	if son.key != path { //匹配不成功才加入链表
+		for _, key := range res { //遍历数组
+			if son.child[key] == nil { //第一个son节点是不是空 ，如果是数据和节点key放进去
+				//将数据放入刚刚初始化的节点
+				son.child[key] = &Son{
+					key:         "",
+					path:        "",
+					deep:        0,
+					child:       make(map[string]*Son),
+					terminal:    false,
+					method:      "",
+					handlerFunc: nil,
+					handler:     nil,
+				}
+				tson = son.child[key]
 			}
-			son = son.child[key] // 将这个子节点作为下一次遍历的son父节点）
+
+			son = son.child[key] //将这个子节点作为下一次遍历的son父节点）
 		}
 	}
-	son.terminal = true
-	son.handlerFunc = handlerFunc
-	son.handler = handler
-	son.path = path
-	son.method = method
+	tson.key = path
+	tson.method = method
+	tson.terminal = true
+	tson.handler = handler
+	tson.handlerFunc = handlerFunc
+	//son.terminal = true
+	//son.handlerFunc = handlerFunc
+	//son.handler = handler
+	//son.path = path
+	//son.method = method
 }
 
 func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
@@ -89,8 +109,8 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
 	path := ""
-	var han http.HandlerFunc
-	var hand http.Handler
+	var han http.HandlerFunc = nil
+	var hand http.Handler = nil
 	var method string
 	if son.key != key {
 		for _, key := range res {

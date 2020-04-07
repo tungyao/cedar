@@ -1,6 +1,7 @@
 package test
 
 import (
+	"../../cedar"
 	"fmt"
 	"net/http"
 	"src/github.com/tungyao/cedar"
@@ -9,35 +10,34 @@ import (
 
 func TestR(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("hello"))
+	r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	//r.Get("/websocket", nil, websocket.Handler(upper))
+	//r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	//	t, _ := template.ParseFiles("./static/socket.html")
+	//	t.Execute(writer, nil)
+	//}, nil)
+	r.Get("/k", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("helloxxx"))
 	}, nil)
-	r.Post("/", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("hello_post"))
+	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	r.Group("/test", func(groups *cedar.Groups) {
-		groups.Get("/a", func(writer http.ResponseWriter, request *http.Request) {
-			writer.Write([]byte("test_a"))
+	r.GlobalFunc("test", func(r *http.Request) error {
+		fmt.Println("123213")
+		return nil
+	})
+	r.Group("/a", func(groups *cedar.Groups) {
+		groups.Group("/b", func(groups *cedar.Groups) {
+			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
+				writer.Write([]byte("hellocc"))
+			}, nil)
+			groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
+				writer.Write([]byte("hellodd"))
+			}, nil)
+		})
+		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
+			r.Template(writer, "/index")
 		}, nil)
 	})
 	http.ListenAndServe(":80", r)
-	// r.Static("./static/")
-	// r.Index("user")
-	//
-	// r.Get("user", func(writer http.ResponseWriter, request *http.Request) {
-	// 	w
-	// },nil)
-	// r.Group("test", func(groups *cedar.GroupR) {
-	// 	groups.Get("one", func(writer http.ResponseWriter, request *http.Request) {
-	// 		fmt.Fprintln(writer, "test.one")
-	// 	},nil)
-	// 	groups.Post("two", func(writer http.ResponseWriter, request *http.Request) {
-	// 		fmt.Fprintln(writer, "test.two")
-	// 	},nil)
-	// })
-	// http.ListenAndServe(":80", r)
-}
-func TestOther(t *testing.T) {
-	pattern := "ge_/index"
-	fmt.Println(pattern[2:])
 }
