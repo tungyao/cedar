@@ -1,7 +1,6 @@
 package test
 
 import (
-	"../../cedar"
 	"fmt"
 	"net/http"
 	"src/github.com/tungyao/cedar"
@@ -10,19 +9,19 @@ import (
 
 func TestR(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
-	//r.Get("/websocket", nil, websocket.Handler(upper))
-	//r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	// r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
+	// r.Get("/websocket", nil, websocket.Handler(upper))
+	// r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 	//	t, _ := template.ParseFiles("./static/socket.html")
 	//	t.Execute(writer, nil)
-	//}, nil)
+	// }, nil)
 	r.Get("/k", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Write([]byte("helloxxx"))
 	}, nil)
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	r.GlobalFunc("test", func(r *http.Request) error {
+	r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request) error {
 		fmt.Println("123213")
 		return nil
 	})

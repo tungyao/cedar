@@ -1,7 +1,6 @@
 package cedar
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,12 +10,11 @@ import (
 var FileType = map[string]string{"html": "text/html", "css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
 
 type Groups struct {
-	tree *Trie
-	path string
+	Tree *Trie
+	Path string
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
-
 	if pusher, ok := w.(http.Pusher); ok {
 		//Push is supported.
 		options := &http.PushOptions{
@@ -74,8 +72,8 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
-	g.tree = mux
-	g.path = path
+	g.Tree = mux
+	g.Path = path
 	fn(g)
 }
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
@@ -88,22 +86,22 @@ func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.
 	})
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Get(mux.path+path, handlerFunc, handlerFunc)
+	mux.Tree.Get(mux.Path+path, handlerFunc, handlerFunc)
 }
 func (mux *Groups) HEAD(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Head(mux.path+path, handlerFunc, handler)
+	mux.Tree.Head(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Post(mux.path+path, handlerFunc, handler)
+	mux.Tree.Post(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Put(mux.path+path, handlerFunc, handler)
+	mux.Tree.Put(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) PATCH(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Patch(mux.path+path, handlerFunc, handler)
+	mux.Tree.Patch(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Delete(mux.path+path, handlerFunc, handler)
+	mux.Tree.Delete(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
@@ -112,13 +110,13 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 func (mux *Groups) CONNECT(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Connect(mux.path+path, handlerFunc, handler)
+	mux.Tree.Connect(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) TRACE(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Trace(mux.path+path, handlerFunc, handler)
+	mux.Tree.Trace(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) OPTIONS(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.tree.Options(mux.path+path, handlerFunc, handler)
+	mux.Tree.Options(mux.Path+path, handlerFunc, handler)
 }
 
 func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
