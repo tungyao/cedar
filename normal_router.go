@@ -1,7 +1,6 @@
 package cedar
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -18,7 +17,7 @@ type Groups struct {
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 
 	if pusher, ok := w.(http.Pusher); ok {
-		//Push is supported.
+		// Push is supported.
 		options := &http.PushOptions{
 			Header: http.Header{
 				"Accept-Encoding": {"Content-Type:" + FileType[filename[1]]},
@@ -43,14 +42,12 @@ end:
 	_, err = w.Write(data)
 }
 func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	//if r.URL.Path[1:7] == "static" {
+	// if r.URL.Path[1:7] == "static" {
 	//	filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 	//	writeStaticFile(r.URL.Path, filename, w)
 	//	return
-	//}
-	me, handf, hand := mux.Find(r.URL.Path)
-	fmt.Println(hand)
-	fmt.Println(me)
+	// }
+	me, handf, hand := mux.Find(r.URL.Path + r.Method)
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
@@ -79,29 +76,55 @@ func (mux *Trie) Template(w http.ResponseWriter, path string) {
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Get(mux.path+path, handlerFunc, handlerFunc)
 }
+func (mux *Groups) HEAD(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Head(mux.path+path, handlerFunc, handler)
+}
 func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Post(mux.path+path, handlerFunc, handler)
 }
 func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Put(mux.path+path, handlerFunc, handler)
 }
+func (mux *Groups) PATCH(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Patch(mux.path+path, handlerFunc, handler)
+}
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.tree.Delete(mux.path+path, handlerFunc, handler)
 }
+func (mux *Groups) CONNECT(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Connect(mux.path+path, handlerFunc, handler)
+}
+func (mux *Groups) TRACE(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Trace(mux.path+path, handlerFunc, handler)
+}
+func (mux *Groups) OPTIONS(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.tree.Options(mux.path+path, handlerFunc, handler)
+}
 
 func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.Insert(http.MethodGet, path, handlerFunc, handler)
+	mux.Insert(http.MethodGet, path+"GET", handlerFunc, handler)
+}
+func (mux *Trie) Head(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodGet, path+"HEAD", handlerFunc, handler)
 }
 func (mux *Trie) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.Insert(http.MethodPost, path, handlerFunc, handler)
+	mux.Insert(http.MethodPost, path+"POST", handlerFunc, handler)
 }
 func (mux *Trie) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.Insert(http.MethodPut, path, handlerFunc, handler)
+	mux.Insert(http.MethodPut, path+"PUT", handlerFunc, handler)
+}
+func (mux *Trie) Patch(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodPut, path+"PATCH", handlerFunc, handler)
 }
 func (mux *Trie) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.Insert(http.MethodDelete, path, handlerFunc, handler)
+	mux.Insert(http.MethodDelete, path+"DELETE", handlerFunc, handler)
 }
-func (mux *Trie) Static(filepath string) {
-	log.Println(1)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath))))
+func (mux *Trie) Connect(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodDelete, path+"CONNECT", handlerFunc, handler)
+}
+func (mux *Trie) Trace(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodDelete, path+"TRACE", handlerFunc, handler)
+}
+func (mux *Trie) Options(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+	mux.Insert(http.MethodDelete, path+"OPTIONS", handlerFunc, handler)
 }
