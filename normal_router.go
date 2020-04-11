@@ -1,6 +1,7 @@
 package cedar
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -16,7 +17,7 @@ type Groups struct {
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	if pusher, ok := w.(http.Pusher); ok {
-		//Push is supported.
+		// Push is supported.
 		options := &http.PushOptions{
 			Header: http.Header{
 				"Accept-Encoding": {"Content-Type:" + FileType[filename[1]]},
@@ -77,13 +78,81 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 func (mux *Trie) Template(w http.ResponseWriter, path string) {
-	writeStaticFile(path+".html", []string{"", "html"}, w)
+	writeStaticFile(path, []string{"", "html"}, w)
 }
 func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,
 	})
+}
+
+type DynamicRoute struct {
+	Path string
+	View string
+}
+
+func (mux *Trie) Dynamic(ymlPath string) {
+	defer func() {
+		x := recover()
+		if x != nil {
+			log.Panic(x)
+		}
+	}()
+	fs, err := os.Open(ymlPath)
+	if err != nil {
+		log.Panic(91, err)
+	}
+	all, _ := ioutil.ReadAll(fs)
+	var enterStyle = 0
+	var lastChar = 0
+	var dy []DynamicRoute = make([]DynamicRoute, 0)
+	for k, v := range all {
+		if v == 13 {
+			if all[k+1] == 10 {
+				enterStyle = 0 // windows
+			} else {
+				enterStyle = 1 // unix
+			}
+			break
+		}
+	}
+	var path string = ""
+	for k, v := range all {
+		if v == 13 {
+			if enterStyle == 0 {
+				for j, c := range all[lastChar:k] {
+					if c == 58 {
+						if path == "" {
+							path = string(all[lastChar:k][j+2:])
+							break
+						} else if path != "" {
+							dy = append(dy, DynamicRoute{
+								Path: path,
+								View: string(all[lastChar:k][j+2:]),
+							})
+							path = ""
+							break
+						}
+					}
+				}
+				lastChar = k + 2
+				continue
+			} else {
+				lastChar = k
+			}
+		}
+	}
+	dy = append(dy, DynamicRoute{
+		Path: path,
+		View: string(all[lastChar+8 : len(all)]),
+	})
+	fmt.Println(dy)
+	for _, v := range dy {
+		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request) {
+			mux.Template(writer, v.View)
+		}, nil)
+	}
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.Tree.Get(mux.Path+path, handlerFunc, handlerFunc)

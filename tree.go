@@ -72,10 +72,9 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
 	tson := mux.root
-	if son.key != path { //匹配不成功才加入链表
-		for _, key := range res { //遍历数组
-			if son.child[key] == nil { //第一个son节点是不是空 ，如果是数据和节点key放进去
-				//将数据放入刚刚初始化的节点
+	if son.key != path {
+		for _, key := range res {
+			if son.child[key] == nil {
 				son.child[key] = &Son{
 					key:         "",
 					path:        "",
@@ -88,8 +87,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 				}
 				tson = son.child[key]
 			}
-
-			son = son.child[key] //将这个子节点作为下一次遍历的son父节点）
+			son = son.child[key]
 		}
 	}
 	tson.key = path
@@ -97,11 +95,6 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	tson.terminal = true
 	tson.handler = handler
 	tson.handlerFunc = handlerFunc
-	//son.terminal = true
-	//son.handlerFunc = handlerFunc
-	//son.handler = handler
-	//son.path = path
-	//son.method = method
 }
 
 func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
@@ -112,6 +105,7 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
 	var han http.HandlerFunc = nil
 	var hand http.Handler = nil
 	var method string
+	// var is_delete bool
 	if son.key != key {
 		for _, key := range res {
 			if son.child[key] == nil {
