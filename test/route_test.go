@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"src/github.com/tungyao/cedar"
 	"testing"
+
+	"../../cedar"
 )
 
 func TestWebsocket(t *testing.T) {

@@ -63,7 +63,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if hand != nil {
-
+		hand.ServeHTTP(w, r)
 	}
 	if handf != nil {
 		handf(w, r)
@@ -107,7 +107,7 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	all, _ := ioutil.ReadAll(fs)
 	var enterStyle = 0
 	var lastChar = 0
-	var dy []DynamicRoute = make([]DynamicRoute, 0)
+	var dy map[string]*DynamicRoute = make(map[string]*DynamicRoute, 0)
 	for k, v := range all {
 		if v == 13 {
 			if all[k+1] == 10 {
@@ -128,10 +128,10 @@ func (mux *Trie) Dynamic(ymlPath string) {
 							path = string(all[lastChar:k][j+2:])
 							break
 						} else if path != "" {
-							dy = append(dy, DynamicRoute{
-								Path: path,
-								View: string(all[lastChar:k][j+2:]),
-							})
+							dy[path] = &DynamicRoute{
+								path,
+								string(all[lastChar:k][j+2:]),
+							}
 							path = ""
 							break
 						}
@@ -144,16 +144,16 @@ func (mux *Trie) Dynamic(ymlPath string) {
 			}
 		}
 	}
-	dy = append(dy, DynamicRoute{
-		Path: path,
-		View: string(all[lastChar+8 : len(all)]),
-	})
-	// fmt.Println(dy)
+	dy[path] = &DynamicRoute{
+		path,
+		string(all[lastChar+8 : len(all)]),
+	}
 	for _, v := range dy {
 		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request) {
-			mux.Template(writer, v.View)
+			mux.Template(writer, dy[request.URL.Path].View)
 		}, nil)
 	}
+
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.Tree.Get(mux.Path+path, handlerFunc, handlerFunc)
