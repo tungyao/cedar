@@ -35,6 +35,7 @@ end:
 	if err != nil {
 		log.Println(err)
 	}
+	defer fs.Close()
 	data, err := ioutil.ReadAll(fs)
 	if err != nil {
 		log.Println(err)
@@ -103,6 +104,7 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	if err != nil {
 		log.Panic(91, err)
 	}
+	defer fs.Close()
 	all, _ := ioutil.ReadAll(fs)
 	var enterStyle = 0
 	var lastChar = 0
