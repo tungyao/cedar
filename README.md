@@ -6,14 +6,21 @@ Router on prefix tree algorithm 😀
 **cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
 > Only one can take effect
 ## update
+* Add dynamic route ,use yaml file to generate route ,must be like this
+```yaml
+- path: /dynamic/day
+  view: /static/dynamic1.html
+- path: /dynamic/day2
+  view: /static/dynamic2.html
+```
 * Add new function: global function
 >  it can to record logs and so on
- ```go
-r.GlobalFunc("test", func(w http.ResponseWriter,r *http.Request) error {
-		fmt.Println("123213")
-		return nil
+```go
+r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request) error {
+	fmt.Println("global func run")
+	return nil
 })
-```
+````
 # Example
 Normal
 ```

@@ -1,0 +1,4 @@
+- path: /dynamic/day
+  view: /static/dynamic1.html
+- path: /asdasd/day2
+  view: /static/dynamic2.html
