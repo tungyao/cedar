@@ -1,7 +1,6 @@
 package cedar
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -149,7 +148,7 @@ func (mux *Trie) Dynamic(ymlPath string) {
 		Path: path,
 		View: string(all[lastChar+8 : len(all)]),
 	})
-	fmt.Println(dy)
+	// fmt.Println(dy)
 	for _, v := range dy {
 		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request) {
 			mux.Template(writer, v.View)
