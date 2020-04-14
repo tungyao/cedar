@@ -156,7 +156,7 @@ func (mux *Trie) Dynamic(ymlPath string) {
 
 }
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
-	mux.Tree.Get(mux.Path+path, handlerFunc, handlerFunc)
+	mux.Tree.Get(mux.Path+path, handlerFunc, handler)
 }
 func (mux *Groups) HEAD(path string, handlerFunc http.HandlerFunc, handler http.Handler) {
 	mux.Tree.Head(mux.Path+path, handlerFunc, handler)
