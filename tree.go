@@ -12,6 +12,7 @@ type Trie struct {
 	pattern    string
 	root       *Son
 	globalFunc []*GlobalFunc
+	middle     map[string]func(w http.ResponseWriter, r *http.Request) bool
 }
 type Son struct {
 	key         string // /a
@@ -20,6 +21,7 @@ type Son struct {
 	child       map[string]*Son
 	terminal    bool
 	method      string
+	midle       string
 	handlerFunc http.HandlerFunc
 	handler     http.Handler
 }
@@ -46,10 +48,11 @@ func NewRouter() *Trie {
 		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request) {
 			_, _ = fmt.Fprint(writer, "index")
 		}, nil, 1),
+		middle:  make(map[string]func(w http.ResponseWriter, r *http.Request) bool),
 		pattern: "/",
 	}
 }
-func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler) {
+func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, name []string) {
 	switch method {
 	case http.MethodGet:
 		fmt.Println(method, "\t", path[:len(path)-3])
@@ -68,7 +71,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	case http.MethodTrace:
 		fmt.Println(method, "\t", path[:len(path)-5])
 	}
-	son := mux.root // son 是指针，不是普通变量
+	son := mux.root
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
 	tson := mux.root
@@ -81,6 +84,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 					deep:        0,
 					child:       make(map[string]*Son),
 					terminal:    false,
+					midle:       "",
 					method:      "",
 					handlerFunc: nil,
 					handler:     nil,
@@ -93,11 +97,14 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	tson.key = path
 	tson.method = method
 	tson.terminal = true
+	if len(name) > 0 {
+		tson.midle = name[0]
+	}
 	tson.handler = handler
 	tson.handlerFunc = handlerFunc
 }
 
-func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
+func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, string) {
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
@@ -109,7 +116,7 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
 	if son.key != key {
 		for _, key := range res {
 			if son.child[key] == nil {
-				return "", nil, nil
+				return "", nil, nil, ""
 			} else {
 				path += son.child[key].key
 				han = son.child[key].handlerFunc
@@ -119,9 +126,12 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler) {
 			son = son.child[key]
 		}
 	} else {
-		return son.method, son.handlerFunc, son.handler
+		return son.method, son.handlerFunc, son.handler, son.midle
 	}
-	return method, han, hand
+	return method, han, hand, son.midle
+}
+func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+	mux.middle[name] = fn
 }
 func SplitString(str []byte, p []byte) []string {
 	group := make([]string, 0)

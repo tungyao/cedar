@@ -45,6 +45,13 @@ func TestNormalGlobal(t *testing.T) {
 }
 func TestGroup(t *testing.T) {
 	r := cedar.NewRouter()
+	r.Middleware("test", func(w http.ResponseWriter, r *http.Request) bool {
+		http.Redirect(w, r, "/a/b/c", 304)
+		return false
+	})
+	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("hello"))
+	}, nil, "test")
 	r.Group("/a", func(groups *cedar.Groups) {
 		groups.Group("/b", func(groups *cedar.Groups) {
 			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
@@ -56,7 +63,7 @@ func TestGroup(t *testing.T) {
 		})
 		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
 			r.Template(writer, "/index")
-		}, nil)
+		}, nil, "test")
 	})
-	http.ListenAndServe(":80", r)
+	http.ListenAndServe(":82", r)
 }
