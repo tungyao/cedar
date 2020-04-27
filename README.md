@@ -6,6 +6,20 @@ Router on prefix tree algorithm 😀
 **cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
 > Only one can take effect
 ## update
+* Middlewre
+***You must declare it in advance***
+
+##### `return false is not continue` `return true can be`
+```go
+r.Middleware("test", func(w http.ResponseWriter, r *http.Request) bool {
+	http.Redirect(w, r, "/a/b/c", 302)
+	return false
+})
+r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	writer.Write([]byte("hello"))
+}, nil, "test") <- middleware name
+```
+
 * Add dynamic route ,use yaml file to generate route ,must be like this
 ```yaml
 - path: /dynamic/day

@@ -66,8 +66,10 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
 		return
 	}
-	if !mux.middle[midle](w, r) {
-		return
+	if fn, ok := mux.middle[midle]; ok {
+		if !fn(w, r) {
+			return
+		}
 	}
 	if hand != nil {
 		hand.ServeHTTP(w, r)

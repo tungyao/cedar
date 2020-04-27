@@ -46,7 +46,7 @@ func TestNormalGlobal(t *testing.T) {
 func TestGroup(t *testing.T) {
 	r := cedar.NewRouter()
 	r.Middleware("test", func(w http.ResponseWriter, r *http.Request) bool {
-		http.Redirect(w, r, "/a/b/c", 304)
+		http.Redirect(w, r, "/a/b/c", 302)
 		return false
 	})
 	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
