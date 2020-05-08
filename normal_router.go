@@ -83,40 +83,40 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (mux *Groups) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Get(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Get(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) HEAD(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Head(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Head(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Post(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Post(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Put(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Put(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) PATCH(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Patch(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Patch(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Delete(mux.Path+path, handlerFunc, handler)
+	mux.Tree.Delete(mux.Path+path, handlerFunc, handler, middleName...)
+}
+func (mux *Groups) CONNECT(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
+	mux.Tree.Connect(mux.Path+path, handlerFunc, handler, middleName...)
+}
+func (mux *Groups) TRACE(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
+	mux.Tree.Trace(mux.Path+path, handlerFunc, handler, middleName...)
+}
+func (mux *Groups) OPTIONS(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
+	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
+}
+func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+	mux.Tree.Middleware(name, fn)
 }
 func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
 	g.Path = mux.Path + path
 	g.Tree = mux.Tree
 	fn(g)
-}
-func (mux *Groups) CONNECT(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Connect(mux.Path+path, handlerFunc, handler)
-}
-func (mux *Groups) TRACE(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Trace(mux.Path+path, handlerFunc, handler)
-}
-func (mux *Groups) OPTIONS(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Options(mux.Path+path, handlerFunc, handler)
-}
-func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
-	mux.Tree.Middleware(name, fn)
 }
 
 func (mux *Trie) Dynamic(ymlPath string) {
@@ -209,15 +209,6 @@ func (mux *Trie) Trace(path string, handlerFunc http.HandlerFunc, handler http.H
 func (mux *Trie) Options(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodDelete, path+"/OPTIONS", handlerFunc, handler, middleName)
 }
-func (mux *Trie) Group(path string, fn func(groups *Groups)) {
-	g := new(Groups)
-	g.Tree = mux
-	g.Path = path
-	fn(g)
-}
-func (mux *Trie) Template(w http.ResponseWriter, path string) {
-	writeStaticFile(path, []string{"", "html"}, w)
-}
 func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
@@ -226,4 +217,13 @@ func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.
 }
 func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
 	mux.Middle(name, fn)
+}
+func (mux *Trie) Group(path string, fn func(groups *Groups)) {
+	g := new(Groups)
+	g.Tree = mux
+	g.Path = path
+	fn(g)
+}
+func (mux *Trie) Template(w http.ResponseWriter, path string) {
+	writeStaticFile(path, []string{"", "html"}, w)
 }
