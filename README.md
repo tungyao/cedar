@@ -6,6 +6,12 @@ Router on prefix tree algorithm 😀
 **cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
 > Only one can take effect
 ## update
+* new route rule
+```go
+r.Get("/index/:id",func(w http.ResponseWriter, r *http.Request){
+    fmt.Println(r.URL.Fragment) // <- use this ,get the `id`
+},nil)
+```
 * Add dynamic route ,use yaml file to generate route ,must be like this
 ```yaml
 - path: /dynamic/day
