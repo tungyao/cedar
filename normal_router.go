@@ -1,7 +1,6 @@
 package cedar
 
 import (
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -59,8 +58,8 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	me, handf, hand, midle, param := mux.Find(r.URL.Path + "/" + r.Method)
-	fmt.Println("get pram=>", param)
+	me, handf, hand, midle, p := mux.Find(r.URL.Path + "/" + r.Method)
+	r.URL.Fragment = p
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")

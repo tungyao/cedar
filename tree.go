@@ -182,7 +182,6 @@ func SplitString(str []byte, p []byte) []string {
 	return group
 }
 func getParam(position string, path, method string) string {
-	fmt.Println(path, position, method)
 	return path[len(position) : len(path)-len(method)-1]
 }
 func fPostion(path string) (string, bool) {
