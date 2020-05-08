@@ -15,15 +15,17 @@ type Trie struct {
 	middle     map[string]func(w http.ResponseWriter, r *http.Request) bool
 }
 type Son struct {
-	key         string // /a
-	path        string // /a
-	deep        int    //
-	child       map[string]*Son
-	terminal    bool
-	method      string
-	midle       string
-	handlerFunc http.HandlerFunc
-	handler     http.Handler
+	key           string // /a
+	path          string // /a
+	deep          int    //
+	child         map[string]*Son
+	terminal      bool
+	method        string
+	midle         string
+	fuzzy         bool
+	fuzzyPosition string
+	handlerFunc   http.HandlerFunc
+	handler       http.Handler
 }
 type GlobalFunc struct {
 	Name string
@@ -55,9 +57,9 @@ func NewRouter() *Trie {
 func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, name []string) {
 	switch method {
 	case http.MethodGet:
-		fmt.Println(method, "\t", path[:len(path)-3])
+		fmt.Println(method, "\t", path[:len(path)-4])
 	case http.MethodConnect:
-		fmt.Println(method, "\t", path[:len(path)-7])
+		fmt.Println(method, "\t", path[:len(path)-8])
 	case http.MethodDelete:
 		fmt.Println(method, "\t", path[:len(path)-6])
 	case http.MethodHead:
@@ -74,6 +76,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	son := mux.root
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
+	res = res[:len(res)-1]
 	tson := mux.root
 	if son.key != path {
 		for _, key := range res {
@@ -89,46 +92,71 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 					handlerFunc: nil,
 					handler:     nil,
 				}
-				tson = son.child[key]
+				//fuzP, fuzB := fPostion(key)
+				//tson = son.child[key]
+				//tson.fuzzy = fuzB
+				//tson.fuzzyPosition = fuzP
 			}
+			fuzP, fuzB := fPostion(key)
+			son.fuzzyPosition = fuzP
+			son.fuzzy = fuzB
 			son = son.child[key]
+			tson = son
 		}
 	}
+	tson.handler = handler
+	tson.handlerFunc = handlerFunc
+	tson.method = method
 	tson.key = path
 	tson.method = method
 	tson.terminal = true
 	if len(name) > 0 {
 		tson.midle = name[0]
 	}
-	tson.handler = handler
-	tson.handlerFunc = handlerFunc
 }
 
-func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, string) {
+func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, string, string) {
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
+	res = res[:len(res)-1]
 	path := ""
+	param := ""
 	var han http.HandlerFunc = nil
 	var hand http.Handler = nil
 	var method string
 	// var is_delete bool
-	if son.key != key {
+	if son.key != key && !son.fuzzy {
+		swichs := false
+		fuzzy := ""
+		paths := ""
 		for _, key := range res {
-			if son.child[key] == nil {
-				return "", nil, nil, ""
+			if son.child[key] == nil && swichs == false {
+				return "", nil, nil, "", ""
+			}
+			if fuzzy != "" {
+				key = fuzzy
+			}
+			path += son.child[key].key
+			han = son.child[key].handlerFunc
+			hand = son.child[key].handler
+			method = son.child[key].method
+			if son.child[key].fuzzy {
+				swichs = true
+				fuzzy = son.child[key].fuzzyPosition
+				paths += key + "/"
 			} else {
-				path += son.child[key].key
-				han = son.child[key].handlerFunc
-				hand = son.child[key].handler
-				method = son.child[key].method
+				param = getParam(paths, pattern, method)
+				swichs = false
+				fuzzy = ""
 			}
 			son = son.child[key]
 		}
 	} else {
-		return son.method, son.handlerFunc, son.handler, son.midle
+		param = getParam(son.fuzzyPosition, pattern, method)
+		return son.method, son.handlerFunc, son.handler, son.midle, param
 	}
-	return method, han, hand, son.midle
+	return method, han, hand, son.midle, param
 }
 func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
 	mux.middle[name] = fn
@@ -152,4 +180,16 @@ func SplitString(str []byte, p []byte) []string {
 		}
 	}
 	return group
+}
+func getParam(position string, path, method string) string {
+	fmt.Println(path, position, method)
+	return path[len(position) : len(path)-len(method)-1]
+}
+func fPostion(path string) (string, bool) {
+	for k, v := range path {
+		if v == ':' {
+			return path[k:], true
+		}
+	}
+	return path, false
 }

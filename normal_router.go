@@ -1,6 +1,7 @@
 package cedar
 
 import (
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -58,15 +59,19 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	me, handf, hand, midle := mux.Find(r.URL.Path + r.Method)
+	me, handf, hand, midle, param := mux.Find(r.URL.Path + "/" + r.Method)
+	fmt.Println("get pram=>", param)
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("<p style=\"font-size=500px\">404</p>"))
+		_, _ = w.Write([]byte("<h1>404</h1>"))
 		return
 	}
-	if !mux.middle[midle](w, r) {
+	if m := mux.middle[midle]; m != nil {
+		if !m(w, r) {
+			return
+		}
 		return
 	}
 	if hand != nil {
@@ -179,31 +184,31 @@ func (mux *Trie) Dynamic(ymlPath string) {
 
 }
 func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodGet, path+"GET", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodGet, path+"/GET", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Head(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodGet, path+"HEAD", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodGet, path+"/HEAD", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPost, path+"POST", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodPost, path+"/POST", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Put(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPut, path+"PUT", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodPut, path+"/PUT", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Patch(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPut, path+"PATCH", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodPut, path+"/PATCH", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"DELETE", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodDelete, path+"/DELETE", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Connect(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"CONNECT", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodDelete, path+"/CONNECT", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Trace(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"TRACE", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodDelete, path+"/TRACE", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Options(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"OPTIONS", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodDelete, path+"/OPTIONS", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
