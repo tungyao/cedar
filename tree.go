@@ -144,12 +144,12 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 			if son.child[key].fuzzy {
 				swichs = true
 				fuzzy = son.child[key].fuzzyPosition
-				paths += key + "/"
 			} else {
 				param = getParam(paths, pattern, method)
 				swichs = false
 				fuzzy = ""
 			}
+			paths += key + "/"
 			son = son.child[key]
 		}
 	} else {
