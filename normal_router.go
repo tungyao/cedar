@@ -71,7 +71,6 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !m(w, r) {
 			return
 		}
-		return
 	}
 	if hand != nil {
 		hand.ServeHTTP(w, r)
