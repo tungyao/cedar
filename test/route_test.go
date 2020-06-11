@@ -69,9 +69,16 @@ func TestGroup(t *testing.T) {
 }
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/index/abd/:id", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/i/:id", func(writer http.ResponseWriter, request *http.Request) {
 		fmt.Println(request.URL.Fragment)
 		writer.Write([]byte("hello"))
+	}, nil)
+	r.Post("/i/:id", func(writer http.ResponseWriter, request *http.Request) {
+		fmt.Println(request.URL.Fragment)
+		writer.Write([]byte("helloaaa"))
+	}, nil)
+	r.Get("/a", func(writer http.ResponseWriter, request *http.Request) {
+		writer.Write([]byte("aaaa"))
 	}, nil)
 	http.ListenAndServe(":8000", r)
 }

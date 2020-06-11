@@ -88,7 +88,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 					child:       make(map[string]*Son),
 					terminal:    false,
 					midle:       "",
-					method:      "",
+					method:      method,
 					handlerFunc: nil,
 					handler:     nil,
 				}
@@ -100,6 +100,7 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 			fuzP, fuzB := fPostion(key)
 			son.fuzzyPosition = fuzP
 			son.fuzzy = fuzB
+			son.method = method
 			son = son.child[key]
 			tson = son
 		}
@@ -110,6 +111,9 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	tson.key = path
 	tson.method = method
 	tson.terminal = true
+	fuzP, fuzB := fPostion(path)
+	tson.fuzzyPosition = fuzP
+	tson.fuzzy = fuzB
 	if len(name) > 0 {
 		tson.midle = name[0]
 	}
@@ -119,13 +123,11 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
-	// res = res[:len(res)-1]
 	path := ""
 	param := ""
 	var han http.HandlerFunc = nil
 	var hand http.Handler = nil
 	var method string
-	// var is_delete bool
 	if son.key != key && !son.fuzzy {
 		swichs := false
 		fuzzy := ""
@@ -145,8 +147,7 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 				swichs = true
 				fuzzy = son.child[key].fuzzyPosition
 			} else {
-				// param = getParam(paths, pattern, method)
-				param = paths
+				param = getParam(paths, pattern, method)
 				swichs = false
 				fuzzy = ""
 			}
