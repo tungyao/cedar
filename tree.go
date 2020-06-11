@@ -61,22 +61,22 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	case http.MethodConnect:
 		fmt.Println(method, "\t", path[:len(path)-8])
 	case http.MethodDelete:
-		fmt.Println(method, "\t", path[:len(path)-6])
+		fmt.Println(method, "\t", path[:len(path)-7])
 	case http.MethodHead:
 		fmt.Println(method, "\t", path[:len(path)-4])
 	case http.MethodOptions:
-		fmt.Println(method, "\t", path[:len(path)-7])
+		fmt.Println(method, "\t", path[:len(path)-8])
 	case http.MethodPost:
-		fmt.Println(method, "\t", path[:len(path)-4])
-	case http.MethodPut:
-		fmt.Println(method, "\t", path[:len(path)-3])
-	case http.MethodTrace:
 		fmt.Println(method, "\t", path[:len(path)-5])
+	case http.MethodPut:
+		fmt.Println(method, "\t", path[:len(path)-4])
+	case http.MethodTrace:
+		fmt.Println(method, "\t", path[:len(path)-6])
 	}
 	son := mux.root
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
-	res = res[:len(res)-1]
+	// res = res[:len(res)-1]
 	tson := mux.root
 	if son.key != path {
 		for _, key := range res {
@@ -119,7 +119,7 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
-	res = res[:len(res)-1]
+	// res = res[:len(res)-1]
 	path := ""
 	param := ""
 	var han http.HandlerFunc = nil
@@ -145,7 +145,8 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 				swichs = true
 				fuzzy = son.child[key].fuzzyPosition
 			} else {
-				param = getParam(paths, pattern, method)
+				// param = getParam(paths, pattern, method)
+				param = paths
 				swichs = false
 				fuzzy = ""
 			}
@@ -181,7 +182,10 @@ func SplitString(str []byte, p []byte) []string {
 	}
 	return group
 }
-func getParam(position string, path, method string) string {
+func getParam(position, path, method string) string {
+	if len(position) > len(path)-len(method)-1 {
+		return ""
+	}
 	return path[len(position) : len(path)-len(method)-1]
 }
 func fPostion(path string) (string, bool) {
