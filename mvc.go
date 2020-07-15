@@ -16,12 +16,16 @@ import (
 var FileType = map[string]string{"html": "text/html", "json": "application/json", "css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
 
 type Groups struct {
-	Tree *Core
+	Tree *Trie
 	Path string
 }
 type DynamicRoute struct {
 	Path string
 	View string
+}
+type Core struct {
+	writer http.ResponseWriter
+	resp   *http.Request
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
@@ -51,7 +55,7 @@ end:
 	}
 	_, err = w.Write(data)
 }
-func (mux *Core) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if len(r.URL.Path) > 7 && r.URL.Path[1:7] == "static" {
 		filename := SplitString([]byte(r.URL.Path[8:]), []byte("."))
 		writeStaticFile(r.URL.Path, filename, w)
@@ -82,7 +86,10 @@ func (mux *Core) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		hand.ServeHTTP(w, r)
 	}
 	if handf != nil {
-		handf(w, r, mux)
+		handf(w, r, &Core{
+			writer: w,
+			resp:   r,
+		})
 	}
 
 }
@@ -124,7 +131,7 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
-func (mux *Core) Dynamic(ymlPath string) {
+func (mux *Trie) Dynamic(ymlPath string) {
 	defer func() {
 		x := recover()
 		if x != nil {
@@ -186,43 +193,43 @@ func (mux *Core) Dynamic(ymlPath string) {
 		}, nil)
 	}
 }
-func (mux *Core) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodGet, path+"/GET", handlerFunc, handler, middleName)
 }
-func (mux *Core) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodHead, path+"/HEAD", handlerFunc, handler, middleName)
 }
-func (mux *Core) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodPost, path+"/POST", handlerFunc, handler, middleName)
 }
-func (mux *Core) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodPut, path+"/PUT", handlerFunc, handler, middleName)
 }
-func (mux *Core) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodPatch, path+"/PATCH", handlerFunc, handler, middleName)
 }
-func (mux *Core) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodDelete, path+"/DELETE", handlerFunc, handler, middleName)
 }
-func (mux *Core) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodConnect, path+"/CONNECT", handlerFunc, handler, middleName)
 }
-func (mux *Core) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodTrace, path+"/TRACE", handlerFunc, handler, middleName)
 }
-func (mux *Core) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Trie) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, handler, middleName)
 }
-func (mux *Core) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
+func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,
 	})
 }
-func (mux *Core) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
 	mux.Middle(name, fn)
 }
-func (mux *Core) Group(path string, fn func(groups *Groups)) {
+func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	g := new(Groups)
 	g.Tree = mux
 	g.Path = path
@@ -233,6 +240,7 @@ func (mux *Core) Group(path string, fn func(groups *Groups)) {
 var (
 	Debug  = false
 	Layout []string
+	OUT    = "./view"
 )
 
 type view struct {
@@ -249,7 +257,7 @@ func (v *view) Assign(name string, value interface{}) *view {
 }
 func (v *view) Render(view_page ...string) {
 	if len(view_page) > 0 {
-		tp, err := template.ParseFiles(includeTemp("./view/"+view_page[0]+".html", Layout)...)
+		tp, err := template.ParseFiles(includeTemp(OUT+"/"+view_page[0]+".html", Layout)...)
 		if err != nil {
 			thownErr(err, v.w)
 			return
@@ -270,15 +278,15 @@ func (v *view) Render(view_page ...string) {
 	thownErr(err, v.w)
 }
 
-func (mux *Core) View(w http.ResponseWriter) *view {
+func (mux *Core) View() *view {
 	return &view{
 		data: make(map[string]interface{}),
-		w:    w,
+		w:    mux.writer,
 	}
 }
-func (mux *Core) Json(w http.ResponseWriter) *json {
+func (mux *Core) Json() *json {
 	return &json{
-		w: w,
+		w: mux.writer,
 	}
 }
 func byt(s string) []byte {
@@ -305,7 +313,7 @@ func thownErr(err error, w http.ResponseWriter) {
 func getTemplatePath(s string) string {
 	sr := strings.Split(s, ".")
 	p := 0
-	out := "./view"
+	o := OUT
 	for k, v := range sr[1][1:] {
 		if v > 64 && v < 91 {
 			if p == 0 {
@@ -314,18 +322,21 @@ func getTemplatePath(s string) string {
 				}
 				p = k + 1
 			}
-			out += strings.ToLower(sr[1][p:k+1]) + "/"
+			o += strings.ToLower(sr[1][p:k+1]) + "/"
 			p = k + 1
 		}
 	}
-	out += strings.ToLower(sr[1][p:]) + ".html"
-	return out
+	o += strings.ToLower(sr[1][p:]) + ".html"
+	return o
 }
-func (mux *Core) SetDebug() {
+func (mux *Trie) SetDebug() {
 	Debug = true
 }
-func (mux *Core) SetLayout(path ...string) {
+func (mux *Trie) SetLayout(path ...string) {
 	Layout = path
+}
+func (mux *Trie) SetView(path string) {
+	OUT = path
 }
 func includeTemp(s string, ss []string) []string {
 	if len(ss) == 0 {

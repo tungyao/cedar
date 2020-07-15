@@ -21,7 +21,7 @@ func TestWebsocket(t *testing.T) {
 func TestDynamic(t *testing.T) {
 	r := cedar.NewRouter()
 	r.Dynamic("dynamic.yml")
-	r.Get("/reset", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Get("/reset", func(writer http.ResponseWriter, request *http.Request, co *cedar.Core) {
 		r.Dynamic("dynamic.yml")
 		writer.Write([]byte("refused success"))
 	}, nil)
@@ -61,13 +61,18 @@ func TestGroup(t *testing.T) {
 	})
 	http.ListenAndServe(":82", r)
 }
+
 func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.View(writer).Render()
+	r.View().Assign("name", "hello").Render("app/index")
+}
+func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Json().Success(map[string]string{"name": "cedar"})
 }
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
 	r.SetLayout()
 	r.Get("/", PageAppIndex, nil)
+	r.Get("/json", AppIndex, nil)
 	http.ListenAndServe(":8000", r)
 }

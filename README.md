@@ -6,6 +6,31 @@ Router on prefix tree algorithm 😀
 **cedar.NewRouter().Get(prefix,http.HandlerFunc,http.Handler)**
 > Only one can take effect
 ## update
+* Mature MVC Framework
+> view->app->index.html
+
+Page is required at the beginning of a method
+```go
+func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+    r.View().Assign("name","hello").Render()
+    // or
+    r.View().Render("app/index")
+}
+func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+    r.Json().Success(map[string]string{"name":"cedar"})
+    // or
+    r.Json().Success(struct{})
+}
+func TestParam(t *testing.T) {
+	r := cedar.NewRouter()
+	r.SetDebug()
+	r.SetLayout()
+	r.Get("/", PageAppIndex, nil)
+	http.ListenAndServe(":8000", r)
+}
+
+```
+
 * new route rule
 ```go
 r.Get("/index/:id",func(w http.ResponseWriter, r *http.Request){
@@ -22,7 +47,7 @@ r.Middleware("test", func(w http.ResponseWriter, r *http.Request) bool {
 	http.Redirect(w, r, "/a/b/c", 302)
 	return false
 })
-r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+r.Get("/", func(writer http.ResponseWriter, request *http.Request,co *Core) {
 	writer.Write([]byte("hello"))
 }, nil, "test") <- middleware name
 ```
@@ -36,7 +61,7 @@ r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
 * Add new function: global function
 >  it can to record logs and so on
 ```go
-r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request) error {
+r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request,co *Core) error {
 	fmt.Println("global func run")
 	return nil
 })
@@ -45,10 +70,10 @@ r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request) error {
 Normal
 ```
 r := cedar.NewRouter()
-r.Get("/",http.HandlerFunc(),nil)
-r.Post("/",http.HandlerFunc(),nil)
-r.Put("/",http.HandlerFunc(),nil)
-r.Delete("/",http.HandlerFunc(),nil)
+r.Get("/",HandlerFunc(),nil)
+r.Post("/",HandlerFunc(),nil)
+r.Put("/",HandlerFunc(),nil)
+r.Delete("/",HandlerFunc(),nil)
 if err := http.ListenAndServe(":80", r); err != nil {
 	log.Panicln(err)
 }
@@ -57,9 +82,9 @@ Group
 ```
 r := cedar.NewRouter()
 r.Group("/",func (group *cedar.Groups){
-    group.Get("/",http.HandlerFunc(),nil)
+    group.Get("/",HandlerFunc(),nil)
     group.Group("/x",func(groups *cedar.Groups) {
-        group.Get("/x",http.HandlerFunc(),nil)
+        group.Get("/x",HandlerFunc(),nil)
     })
 })
 if err := http.ListenAndServe(":80", r); err != nil {
