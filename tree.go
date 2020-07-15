@@ -9,7 +9,7 @@ import (
 
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Core)
 
-type Core struct {
+type Trie struct {
 	num        int64
 	pattern    string
 	root       *Son
@@ -45,9 +45,9 @@ func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Ha
 		child:       make(map[string]*Son),
 	}
 }
-func NewRouter() *Core {
+func NewRouter() *Trie {
 	fmt.Println("-----------Register router-----------")
-	return &Core{
+	return &Trie{
 		num: 1,
 		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request, r *Core) {
 			_, _ = fmt.Fprint(writer, "index")
@@ -56,7 +56,7 @@ func NewRouter() *Core {
 		pattern: "/",
 	}
 }
-func (mux *Core) Insert(method string, path string, handlerFunc HandlerFunc, handler http.Handler, name []string) {
+func (mux *Trie) Insert(method string, path string, handlerFunc HandlerFunc, handler http.Handler, name []string) {
 	switch method {
 	case http.MethodGet:
 		fmt.Println(method, "\t", path[:len(path)-4])
@@ -121,7 +121,7 @@ func (mux *Core) Insert(method string, path string, handlerFunc HandlerFunc, han
 	}
 }
 
-func (mux *Core) Find(key string) (string, HandlerFunc, http.Handler, string, string) {
+func (mux *Trie) Find(key string) (string, HandlerFunc, http.Handler, string, string) {
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
@@ -162,7 +162,7 @@ func (mux *Core) Find(key string) (string, HandlerFunc, http.Handler, string, st
 	}
 	return method, han, hand, son.midle, param
 }
-func (mux *Core) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
 	mux.middle[name] = fn
 }
 func SplitString(str []byte, p []byte) []string {
