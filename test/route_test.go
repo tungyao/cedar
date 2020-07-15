@@ -61,13 +61,18 @@ func TestGroup(t *testing.T) {
 	})
 	http.ListenAndServe(":82", r)
 }
+
 func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.View().Render()
+	r.View().Assign("name", "hello").Render("app/index")
+}
+func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Json().Success(map[string]string{"name": "cedar"})
 }
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
 	r.SetLayout()
 	r.Get("/", PageAppIndex, nil)
+	r.Get("/json", AppIndex, nil)
 	http.ListenAndServe(":8000", r)
 }

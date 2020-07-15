@@ -257,7 +257,7 @@ func (v *view) Assign(name string, value interface{}) *view {
 }
 func (v *view) Render(view_page ...string) {
 	if len(view_page) > 0 {
-		tp, err := template.ParseFiles(includeTemp("./view/"+view_page[0]+".html", Layout)...)
+		tp, err := template.ParseFiles(includeTemp(OUT+"/"+view_page[0]+".html", Layout)...)
 		if err != nil {
 			thownErr(err, v.w)
 			return
