@@ -71,7 +71,6 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if !m(w, r) {
 			return
 		}
-		return
 	}
 	if hand != nil {
 		hand.ServeHTTP(w, r)
@@ -186,7 +185,7 @@ func (mux *Trie) Get(path string, handlerFunc http.HandlerFunc, handler http.Han
 	mux.Insert(http.MethodGet, path+"/GET", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Head(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodGet, path+"/HEAD", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodHead, path+"/HEAD", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Post(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodPost, path+"/POST", handlerFunc, handler, middleName)
@@ -195,19 +194,19 @@ func (mux *Trie) Put(path string, handlerFunc http.HandlerFunc, handler http.Han
 	mux.Insert(http.MethodPut, path+"/PUT", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Patch(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPut, path+"/PATCH", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodPatch, path+"/PATCH", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Delete(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodDelete, path+"/DELETE", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Connect(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"/CONNECT", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodConnect, path+"/CONNECT", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Trace(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"/TRACE", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodTrace, path+"/TRACE", handlerFunc, handler, middleName)
 }
 func (mux *Trie) Options(path string, handlerFunc http.HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"/OPTIONS", handlerFunc, handler, middleName)
+	mux.Insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, handler, middleName)
 }
 func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
