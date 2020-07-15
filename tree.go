@@ -7,7 +7,9 @@ import (
 	"strings"
 )
 
-type Trie struct {
+type HandlerFunc func(http.ResponseWriter, *http.Request, *Core)
+
+type Core struct {
 	num        int64
 	pattern    string
 	root       *Son
@@ -24,7 +26,7 @@ type Son struct {
 	midle         string
 	fuzzy         bool
 	fuzzyPosition string
-	handlerFunc   http.HandlerFunc
+	handlerFunc   HandlerFunc
 	handler       http.Handler
 }
 type GlobalFunc struct {
@@ -32,7 +34,7 @@ type GlobalFunc struct {
 	Fn   func(w http.ResponseWriter, r *http.Request) error
 }
 
-func NewSon(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, deep int) *Son {
+func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Handler, deep int) *Son {
 	return &Son{
 		key:         path,
 		path:        path,
@@ -43,18 +45,18 @@ func NewSon(method string, path string, handlerFunc http.HandlerFunc, handler ht
 		child:       make(map[string]*Son),
 	}
 }
-func NewRouter() *Trie {
+func NewRouter() *Core {
 	fmt.Println("-----------Register router-----------")
-	return &Trie{
+	return &Core{
 		num: 1,
-		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request) {
+		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request, r *Core) {
 			_, _ = fmt.Fprint(writer, "index")
 		}, nil, 1),
 		middle:  make(map[string]func(w http.ResponseWriter, r *http.Request) bool),
 		pattern: "/",
 	}
 }
-func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc, handler http.Handler, name []string) {
+func (mux *Core) Insert(method string, path string, handlerFunc HandlerFunc, handler http.Handler, name []string) {
 	switch method {
 	case http.MethodGet:
 		fmt.Println(method, "\t", path[:len(path)-4])
@@ -119,13 +121,13 @@ func (mux *Trie) Insert(method string, path string, handlerFunc http.HandlerFunc
 	}
 }
 
-func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, string, string) {
+func (mux *Core) Find(key string) (string, HandlerFunc, http.Handler, string, string) {
 	son := mux.root
 	pattern := strings.TrimPrefix(key, "/")
 	res := strings.Split(pattern, mux.pattern)
 	path := ""
 	param := ""
-	var han http.HandlerFunc = nil
+	var han HandlerFunc = nil
 	var hand http.Handler = nil
 	var method string
 	if son.key != key && !son.fuzzy {
@@ -160,7 +162,7 @@ func (mux *Trie) Find(key string) (string, http.HandlerFunc, http.Handler, strin
 	}
 	return method, han, hand, son.midle, param
 }
-func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Core) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
 	mux.middle[name] = fn
 }
 func SplitString(str []byte, p []byte) []string {
