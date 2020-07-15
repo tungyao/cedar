@@ -1,7 +1,6 @@
 package test
 
 import (
-	"fmt"
 	"html/template"
 	"net/http"
 	"testing"
@@ -13,7 +12,7 @@ func TestWebsocket(t *testing.T) {
 	r := cedar.NewRouter()
 	r.Get("/static/", nil, http.StripPrefix("/static/", http.FileServer(http.Dir("./static"))))
 	// r.Get("/websocket", nil, websocket.Handler(upper))
-	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		t, _ := template.ParseFiles("./static/socket.html")
 		t.Execute(writer, nil)
 	}, nil)
@@ -22,7 +21,7 @@ func TestWebsocket(t *testing.T) {
 func TestDynamic(t *testing.T) {
 	r := cedar.NewRouter()
 	r.Dynamic("dynamic.yml")
-	r.Get("/reset", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/reset", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		r.Dynamic("dynamic.yml")
 		writer.Write([]byte("refused success"))
 	}, nil)
@@ -31,16 +30,12 @@ func TestDynamic(t *testing.T) {
 }
 func TestNormalGlobal(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/k", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/k", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("helloxxx"))
 	}, nil)
-	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	r.GlobalFunc("test", func(w http.ResponseWriter, r *http.Request) error {
-		fmt.Println("global func run")
-		return nil
-	})
 	http.ListenAndServe(":80", r)
 }
 func TestGroup(t *testing.T) {
@@ -49,36 +44,30 @@ func TestGroup(t *testing.T) {
 		http.Redirect(w, r, "/a/b/c", 302)
 		return false
 	})
-	r.Get("/", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("hello"))
 	}, nil, "test")
 	r.Group("/a", func(groups *cedar.Groups) {
 		groups.Group("/b", func(groups *cedar.Groups) {
-			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request) {
+			groups.Get("/c", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 				writer.Write([]byte("hellocc"))
 			}, nil)
-			groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
+			groups.Get("/d", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 				writer.Write([]byte("hellodd"))
 			}, nil)
 		})
-		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request) {
-			r.Template(writer, "/index")
+		groups.Get("/d", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		}, nil, "test")
 	})
 	http.ListenAndServe(":82", r)
 }
+func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.View(writer).Render()
+}
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/i/:id", func(writer http.ResponseWriter, request *http.Request) {
-		fmt.Println(request.URL.Fragment)
-		writer.Write([]byte("hello"))
-	}, nil)
-	r.Post("/i/:id", func(writer http.ResponseWriter, request *http.Request) {
-		fmt.Println(request.URL.Fragment)
-		writer.Write([]byte("helloaaa"))
-	}, nil)
-	r.Get("/a", func(writer http.ResponseWriter, request *http.Request) {
-		writer.Write([]byte("aaaa"))
-	}, nil)
+	r.SetDebug()
+	r.SetLayout()
+	r.Get("/", PageAppIndex, nil)
 	http.ListenAndServe(":8000", r)
 }
