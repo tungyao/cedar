@@ -2,7 +2,6 @@ package cedar
 
 import (
 	json2 "encoding/json"
-	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"unsafe"
 )
@@ -370,7 +370,11 @@ type AutoRegister struct {
 
 func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
-		fmt.Println(reflect.ValueOf(auto).Method(i))
+		fuc := reflect.ValueOf(auto).MethodByName(reflect.TypeOf(auto).Method(i).Name)
+		x := HandlerFunc(func(writer http.ResponseWriter, request *http.Request, core *Core) {
+			fuc.Call([]reflect.Value{reflect.ValueOf(writer), reflect.ValueOf(request), reflect.ValueOf(core)})
+		})
+		mux.Get("/test"+strconv.Itoa(i), x, nil)
 	}
 	t := &AutoRegister{}
 	return t
