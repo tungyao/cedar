@@ -2,6 +2,7 @@ package cedar
 
 import (
 	json2 "encoding/json"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -361,4 +362,16 @@ func (j *json) Error(err string) {
 	j.w.WriteHeader(503)
 	j.w.Header().Set("content-type", "application/json")
 	j.w.Write(byt(`{"msg":"` + err + `"}`))
+}
+
+// 自动注册路由
+type AutoRegister struct {
+}
+
+func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
+	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
+		fmt.Println(reflect.ValueOf(auto).Method(i))
+	}
+	t := &AutoRegister{}
+	return t
 }
