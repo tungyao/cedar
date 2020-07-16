@@ -2,6 +2,7 @@ package cedar
 
 import (
 	json2 "encoding/json"
+	"fmt"
 	"html/template"
 	"io/ioutil"
 	"log"
@@ -68,7 +69,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	me, handf, hand, midle, p := mux.Find(r.URL.Path + "/" + r.Method)
+	me, handf, _, midle, p := mux.Find(r.URL.Path + "/" + r.Method)
 	r.URL.Fragment = p
 	if r.Method != me {
 		w.Header().Set("Content-type", "text/html")
@@ -82,9 +83,9 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	if hand != nil {
-		hand.ServeHTTP(w, r)
-	}
+	// if hand != nil {
+	// 	hand.ServeHTTP(w, r)
+	// }
 	if handf != nil {
 		handf(w, r, &Core{
 			writer: w,
@@ -227,6 +228,7 @@ func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.
 	})
 }
 func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+	fmt.Println("middle =>", name)
 	mux.Middle(name, fn)
 }
 func (mux *Trie) Group(path string, fn func(groups *Groups)) {
@@ -314,6 +316,10 @@ func getTemplatePath(s string) string {
 	sr := strings.Split(s, ".")
 	p := 0
 	o := OUT
+	if strings.Index(sr[len(sr)-1], "_") != -1 {
+		sx := strings.Split(sr[len(sr)-1], "_")
+		sr[1] = sx[len(sx)-1]
+	}
 	for k, v := range sr[1][1:] {
 		if v > 64 && v < 91 {
 			if p == 0 {
@@ -391,26 +397,27 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
 		mName := reflect.TypeOf(auto).Method(i).Name
 		fuc := reflect.ValueOf(auto).MethodByName(mName)
-		x := HandlerFunc(*(*func(writer http.ResponseWriter, request *http.Request, core *Core))(unsafe.Pointer(&fuc)))
-		p := -1
-		for k, v := range mName {
-			if v > 64 && v < 91 {
-				if p == 0 {
-					p = k
-					break
-				} else {
-					if p < 0 {
-						p = 0
-					}
-				}
-
-			}
+		// 判断是不是中间件构成
+		if mName[:6] == "Middle" {
+			reflect.ValueOf(mux).MethodByName("Middleware").Call([]reflect.Value{reflect.ValueOf(strings.ToLower(mName[6:])), reflect.ValueOf(fuc.Interface().(func(w http.ResponseWriter, r *http.Request) bool))})
+			continue
 		}
-		reflect.ValueOf(mux).MethodByName(mName[:p]).Call([]reflect.Value{
-			reflect.ValueOf("/" + pkgName + getRouterPath(mName[p:len(mName)])),
-			reflect.ValueOf(x),
-			reflect.New(fuc.Type()).Elem(),
-			reflect.ValueOf([]string{})})
+		x := fuc.Interface().(func(writer http.ResponseWriter, request *http.Request, core *Core))
+		// x := *(*func(writer http.ResponseWriter, request *http.Request, core *Core))(unsafe.Pointer(fuc.Pointer()))
+		ma := strings.Split(mName, "_")
+		if len(ma) == 2 {
+			mName = ma[1]
+		} else if len(ma) > 2 {
+			mName = ma[len(ma)-1]
+		}
+		in := make([]reflect.Value, 0)
+		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		in = append(in, reflect.ValueOf(x))
+		in = append(in, reflect.ValueOf(http.Handler(mux)))
+		for i := 0; i < len(ma)-2; i++ {
+			in = append(in, reflect.ValueOf(strings.ToLower(ma[1+i])))
+		}
+		reflect.ValueOf(mux).MethodByName(ma[0]).Call(in)
 	}
 	t := &AutoRegister{}
 	return t

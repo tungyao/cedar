@@ -81,8 +81,9 @@ func TestParam(t *testing.T) {
 }
 func TestAuto(t *testing.T) {
 	r := cedar.NewRouter()
+	r.SetDebug()
 	r.AutoRegister(&router.Auto{})
-	// http.ListenAndServe(":8000", r)
+	http.ListenAndServe(":8000", r)
 }
 
 type TestX struct {

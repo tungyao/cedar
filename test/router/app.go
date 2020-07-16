@@ -1,6 +1,7 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
 
 	"../../../cedar"
@@ -8,9 +9,10 @@ import (
 
 type Auto cedar.AutoRegister
 
-func (a *Auto) GetPageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	writer.Write([]byte("hello"))
+func (a *Auto) Get_test_PageAppIndex(writer http.ResponseWriter, request *http.Request, co *cedar.Core) {
+	co.View().Assign("name", "cedar").Render()
 }
-func (a *Auto) GetMTestAppIndex() {
-
+func (a *Auto) MiddleTest(w http.ResponseWriter, r *http.Request) bool {
+	fmt.Println("load middleware => test")
+	return true
 }
