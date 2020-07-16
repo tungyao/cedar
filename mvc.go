@@ -9,7 +9,6 @@ import (
 	"os"
 	"reflect"
 	"runtime"
-	"strconv"
 	"strings"
 	"unsafe"
 )
@@ -330,6 +329,24 @@ func getTemplatePath(s string) string {
 	o += strings.ToLower(sr[1][p:]) + ".html"
 	return o
 }
+func getRouterPath(s string) string {
+	p := 0
+	o := ""
+	for k, v := range s[1:] {
+		if v > 64 && v < 91 {
+			if p == 0 {
+				if s[p:k+1] != "Page" {
+					return ""
+				}
+				p = k + 1
+			}
+			o += strings.ToLower(s[p:k+1]) + "/"
+			p = k + 1
+		}
+	}
+	o += strings.ToLower(s[p:])
+	return o
+}
 func (mux *Trie) SetDebug() {
 	Debug = true
 }
@@ -369,12 +386,27 @@ type AutoRegister struct {
 }
 
 func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
+	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
+	pkgName := spPkg[len(spPkg)-1]
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
-		fuc := reflect.ValueOf(auto).MethodByName(reflect.TypeOf(auto).Method(i).Name)
-		x := HandlerFunc(func(writer http.ResponseWriter, request *http.Request, core *Core) {
-			fuc.Call([]reflect.Value{reflect.ValueOf(writer), reflect.ValueOf(request), reflect.ValueOf(core)})
-		})
-		mux.Get("/test"+strconv.Itoa(i), x, nil)
+		mName := reflect.TypeOf(auto).Method(i).Name
+		fuc := reflect.ValueOf(auto).MethodByName(mName)
+		x := HandlerFunc(*(*func(writer http.ResponseWriter, request *http.Request, core *Core))(unsafe.Pointer(&fuc)))
+		p := -1
+		for k, v := range mName {
+			if v > 64 && v < 91 {
+				if p == 0 {
+					p = k
+					break
+				} else {
+					if p < 0 {
+						p = 0
+					}
+				}
+
+			}
+		}
+		reflect.ValueOf(mux).MethodByName(mName[:p]).Call([]reflect.Value{reflect.ValueOf("/" + pkgName + getRouterPath(mName[p:len(mName)])), reflect.ValueOf(x), reflect.ValueOf((http.Handler)(nil))})
 	}
 	t := &AutoRegister{}
 	return t
