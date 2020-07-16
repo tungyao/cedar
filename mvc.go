@@ -385,7 +385,7 @@ func (j *json) Error(err string) {
 type AutoRegister struct {
 }
 
-func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
+func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
 	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
 	pkgName := spPkg[len(spPkg)-1]
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
@@ -406,7 +406,11 @@ func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
 
 			}
 		}
-		reflect.ValueOf(mux).MethodByName(mName[:p]).Call([]reflect.Value{reflect.ValueOf("/" + pkgName + getRouterPath(mName[p:len(mName)])), reflect.ValueOf(x), reflect.ValueOf((http.Handler)(nil))})
+		reflect.ValueOf(mux).MethodByName(mName[:p]).Call([]reflect.Value{
+			reflect.ValueOf("/" + pkgName + getRouterPath(mName[p:len(mName)])),
+			reflect.ValueOf(x),
+			reflect.New(fuc.Type()).Elem(),
+			reflect.ValueOf([]string{})})
 	}
 	t := &AutoRegister{}
 	return t
