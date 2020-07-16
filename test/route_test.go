@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"reflect"
 	"testing"
-	"unsafe"
 
 	"../../cedar"
 	"./router"
@@ -81,19 +81,21 @@ func TestParam(t *testing.T) {
 }
 func TestAuto(t *testing.T) {
 	r := cedar.NewRouter()
+	r.SetDebug()
 	r.AutoRegister(&router.Auto{})
-	// http.ListenAndServe(":8000", r)
+	http.ListenAndServe(":8000", r)
 }
 
 type TestX struct {
 }
 
-func (tx *TestX) Name() {
+func (tx *TestX) Name(x http.Handler) {
 	fmt.Println(123)
 }
 func TestAutoMethod(t *testing.T) {
 	x := &TestX{}
-	// reflect.ValueOf(x).MethodByName("Name").Call(make([]reflect.Value, 0))
-	p := unsafe.Pointer(x)
-	fmt.Println(uintptr(p) + unsafe.Sizeof(p) + uintptr(16))
+	m := reflect.ValueOf(x).MethodByName("Name")
+	m.Call([]reflect.Value{reflect.New(m.Type().In(0)).Elem()})
+	// p := unsafe.Pointer(x)
+	// fmt.Println(uintptr(p) + unsafe.Sizeof(p) + uintptr(16))
 }
