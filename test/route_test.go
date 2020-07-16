@@ -1,11 +1,14 @@
 package test
 
 import (
+	"fmt"
 	"html/template"
 	"net/http"
+	"reflect"
 	"testing"
 
 	"../../cedar"
+	"./router"
 )
 
 func TestWebsocket(t *testing.T) {
@@ -75,4 +78,24 @@ func TestParam(t *testing.T) {
 	r.Get("/", PageAppIndex, nil)
 	r.Get("/json", AppIndex, nil)
 	http.ListenAndServe(":8000", r)
+}
+func TestAuto(t *testing.T) {
+	r := cedar.NewRouter()
+	r.SetDebug()
+	r.AutoRegister(&router.Auto{})
+	http.ListenAndServe(":8000", r)
+}
+
+type TestX struct {
+}
+
+func (tx *TestX) Name(x http.Handler) {
+	fmt.Println(123)
+}
+func TestAutoMethod(t *testing.T) {
+	x := &TestX{}
+	m := reflect.ValueOf(x).MethodByName("Name")
+	m.Call([]reflect.Value{reflect.New(m.Type().In(0)).Elem()})
+	// p := unsafe.Pointer(x)
+	// fmt.Println(uintptr(p) + unsafe.Sizeof(p) + uintptr(16))
 }
