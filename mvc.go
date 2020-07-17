@@ -422,3 +422,31 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 	t := &AutoRegister{}
 	return t
 }
+
+// 要求有自动注册插件到Core中去
+// 插件名字 插件结构体
+// 插件应该要继承 Core 结构体 并且重写 AutoStart 和 AutoBefore 方法
+// 插件执行时间 应该分为2个阶段 一个是 系统启动 一个是 执行HandlerFunc之前
+type Plugin struct {
+	BX map[string]interface{}
+}
+
+//
+func (pl *Plugin) R() {
+
+}
+func (pl *Plugin) AutoStart(w http.ResponseWriter, r *http.Request, co *Core) {
+
+}
+func (pl *Plugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *Core) {
+
+}
+func (pl *Plugin) Call(funcName string, args ...interface{}) interface{} {
+	return nil
+}
+
+// 在方法之中使用 插件
+func (co *Core) Plugin(name string) interface{} {
+
+	return nil
+}
