@@ -1,10 +1,10 @@
-package router
+package v1
 
 import (
 	"fmt"
 	"net/http"
 
-	"../../../cedar"
+	"../../../../cedar"
 )
 
 type Auto cedar.AutoRegister

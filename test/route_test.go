@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"../../cedar"
-	"./router"
+	"./router/v1"
 )
 
 func TestWebsocket(t *testing.T) {
@@ -65,7 +64,22 @@ func TestGroup(t *testing.T) {
 	http.ListenAndServe(":82", r)
 }
 
+type TestPlugin struct {
+	cedar.Plugin
+	Name string `required field`
+}
+
+func (pl *TestPlugin) AutoStart(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
+
+}
+func (pl *TestPlugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
+
+}
+func (tx *TestPlugin) Fmt() {
+	fmt.Println(123)
+}
 func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Plugin("session").(*TestPlugin).Fmt()
 	r.View().Assign("name", "hello").Render("app/index")
 }
 func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
@@ -79,23 +93,11 @@ func TestParam(t *testing.T) {
 	r.Get("/json", AppIndex, nil)
 	http.ListenAndServe(":8000", r)
 }
+
 func TestAuto(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
-	r.AutoRegister(&router.Auto{})
+	r.AutoRegister(&v1.Auto{})
+	r.AutoRegister(&v1.M2{})
 	http.ListenAndServe(":8000", r)
-}
-
-type TestX struct {
-}
-
-func (tx *TestX) Name(x http.Handler) {
-	fmt.Println(123)
-}
-func TestAutoMethod(t *testing.T) {
-	x := &TestX{}
-	m := reflect.ValueOf(x).MethodByName("Name")
-	m.Call([]reflect.Value{reflect.New(m.Type().In(0)).Elem()})
-	// p := unsafe.Pointer(x)
-	// fmt.Println(uintptr(p) + unsafe.Sizeof(p) + uintptr(16))
 }
