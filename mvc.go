@@ -24,10 +24,6 @@ type DynamicRoute struct {
 	Path string
 	View string
 }
-type Core struct {
-	writer http.ResponseWriter
-	resp   *http.Request
-}
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	if pusher, ok := w.(http.Pusher); ok {
@@ -238,6 +234,12 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
+type Core struct {
+	writer http.ResponseWriter
+	resp   *http.Request
+	PL     *Plugin
+}
+
 // add new component view render
 var (
 	Debug  = false
@@ -280,16 +282,23 @@ func (v *view) Render(view_page ...string) {
 	thownErr(err, v.w)
 }
 
-func (mux *Core) View() *view {
+func (co *Core) View() *view {
 	return &view{
 		data: make(map[string]interface{}),
-		w:    mux.writer,
+		w:    co.writer,
 	}
 }
-func (mux *Core) Json() *json {
+func (co *Core) Json() *json {
 	return &json{
-		w: mux.writer,
+		w: co.writer,
 	}
+}
+func (co *Core) Byte(s string) []byte {
+	rs := *(*reflect.StringHeader)(unsafe.Pointer(&s))
+	return *(*[]byte)(unsafe.Pointer(&rs))
+}
+func (co *Core) String(b []byte) string {
+	return *(*string)(unsafe.Pointer(&b))
 }
 func byt(s string) []byte {
 	rs := *(*reflect.StringHeader)(unsafe.Pointer(&s))
@@ -319,6 +328,9 @@ func getTemplatePath(s string) string {
 	if strings.Index(sr[len(sr)-1], "_") != -1 {
 		sx := strings.Split(sr[len(sr)-1], "_")
 		sr[1] = sx[len(sx)-1]
+		if sr[1] == "" {
+			sr[1] = sx[len(sx)-2] + "/index"
+		}
 	}
 	for k, v := range sr[1][1:] {
 		if v > 64 && v < 91 {
@@ -392,8 +404,8 @@ type AutoRegister struct {
 }
 
 func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
-	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
-	pkgName := spPkg[len(spPkg)-1]
+	// spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
+	// pkgName := spPkg[len(spPkg)-1]
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
 		mName := reflect.TypeOf(auto).Method(i).Name
 		fuc := reflect.ValueOf(auto).MethodByName(mName)
@@ -409,9 +421,13 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 			mName = ma[1]
 		} else if len(ma) > 2 {
 			mName = ma[len(ma)-1]
+			if mName == "" {
+				mName = ma[len(ma)-2]
+			}
 		}
 		in := make([]reflect.Value, 0)
-		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		// in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		in = append(in, reflect.ValueOf(getRouterPath(mName)))
 		in = append(in, reflect.ValueOf(x))
 		in = append(in, reflect.ValueOf(http.Handler(mux)))
 		for i := 0; i < len(ma)-2; i++ {
@@ -423,30 +439,47 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 	return t
 }
 
+var PluginArr = map[string]reflect.Value{}
+
 // 要求有自动注册插件到Core中去
 // 插件名字 插件结构体
 // 插件应该要继承 Core 结构体 并且重写 AutoStart 和 AutoBefore 方法
 // 插件执行时间 应该分为2个阶段 一个是 系统启动 一个是 执行HandlerFunc之前
 type Plugin struct {
-	BX map[string]interface{}
+}
+type plugin struct {
+	structs reflect.Value
 }
 
-//
-func (pl *Plugin) R() {
-
+// 直接从这里加载进插件池
+func (mux *Trie) Plugin(pluginStruct interface{}) {
+	st := reflect.TypeOf(pluginStruct)
+	PluginArr[st.Name()] = reflect.ValueOf(pluginStruct)
 }
+
 func (pl *Plugin) AutoStart(w http.ResponseWriter, r *http.Request, co *Core) {
 
 }
 func (pl *Plugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *Core) {
 
 }
-func (pl *Plugin) Call(funcName string, args ...interface{}) interface{} {
+func (pl *plugin) Call(funcName string, args ...interface{}) interface{} {
+	arr := make([]reflect.Value, len(args))
+
+	if len(args) != 0 {
+		for k, v := range args {
+			arr[k] = reflect.ValueOf(v)
+		}
+		pl.structs.MethodByName(funcName).Call(arr)
+	} else {
+		pl.structs.MethodByName(funcName).Call(arr)
+	}
 	return nil
 }
 
 // 在方法之中使用 插件
-func (co *Core) Plugin(name string) interface{} {
-
-	return nil
+func (co *Core) Plugin(name string) *plugin {
+	return &plugin{
+		structs: PluginArr[name],
+	}
 }

@@ -66,31 +66,27 @@ func TestGroup(t *testing.T) {
 
 type TestPlugin struct {
 	cedar.Plugin
-	Name string `required field`
 }
 
-func (pl *TestPlugin) AutoStart(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
+func (tp *TestPlugin) AutoStart(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
 
 }
-func (pl *TestPlugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
+func (tp *TestPlugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
 
 }
-func (tx *TestPlugin) Fmt() {
-	fmt.Println(123)
+func (tp TestPlugin) Fmt() {
+	fmt.Println("plugin run once")
 }
 func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.Plugin("session").(*TestPlugin).Fmt()
-	r.View().Assign("name", "hello").Render("app/index")
-}
-func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.Json().Success(map[string]string{"name": "cedar"})
+	r.Plugin("TestPlugin").Call("Fmt")
+	// r.View().Assign("name", "hello").Render("app/index")
 }
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
 	r.SetLayout()
+	r.Plugin(TestPlugin{})
 	r.Get("/", PageAppIndex, nil)
-	r.Get("/json", AppIndex, nil)
 	http.ListenAndServe(":8000", r)
 }
 
@@ -100,4 +96,8 @@ func TestAuto(t *testing.T) {
 	r.AutoRegister(&v1.Auto{})
 	r.AutoRegister(&v1.M2{})
 	http.ListenAndServe(":8000", r)
+}
+
+func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Json().Success(map[string]string{"name": "cedar"})
 }
