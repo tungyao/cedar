@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"reflect"
 	"testing"
 
 	"../../cedar"
-	"./router"
+	"./router/v1"
 )
 
 func TestWebsocket(t *testing.T) {
@@ -65,37 +64,52 @@ func TestGroup(t *testing.T) {
 	http.ListenAndServe(":82", r)
 }
 
-func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.View().Assign("name", "hello").Render("app/index")
+var Data map[string]string
+
+type TestPlugin struct {
+	cedar.Plugin
 }
-func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-	r.Json().Success(map[string]string{"name": "cedar"})
+
+func (tp *TestPlugin) AutoStart() *TestPlugin {
+	fmt.Println("插件初始加载")
+	Data = make(map[string]string)
+	return &TestPlugin{}
+}
+func (tp *TestPlugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *cedar.Core) {
+	fmt.Println("插件运行前加载")
+	fmt.Println(Data)
+}
+func (tp *TestPlugin) Set(key, value string) {
+	Data[key] = value
+}
+func (tp *TestPlugin) Get(key string) string {
+	return Data[key]
+}
+func PageAppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Plugin("TestPlugin").Call("Set", request.URL.Query().Get("key"), request.URL.Query().Get("key"))
+	// r.View().Assign("name", "hello").Render("app/index")
 }
 func TestParam(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
 	r.SetLayout()
+	r.Plugin(&TestPlugin{})
 	r.Get("/", PageAppIndex, nil)
-	r.Get("/json", AppIndex, nil)
+	r.Get("/get", func(writer http.ResponseWriter, request *http.Request, core *cedar.Core) {
+		valye := core.Plugin("TestPlugin").Call("Get", request.URL.Query().Get("key"))
+		writer.Write([]byte(valye[0].String()))
+	}, nil)
 	http.ListenAndServe(":8000", r)
 }
+
 func TestAuto(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
-	r.AutoRegister(&router.Auto{})
+	r.AutoRegister(&v1.Auto{})
+	r.AutoRegister(&v1.M2{})
 	http.ListenAndServe(":8000", r)
 }
 
-type TestX struct {
-}
-
-func (tx *TestX) Name(x http.Handler) {
-	fmt.Println(123)
-}
-func TestAutoMethod(t *testing.T) {
-	x := &TestX{}
-	m := reflect.ValueOf(x).MethodByName("Name")
-	m.Call([]reflect.Value{reflect.New(m.Type().In(0)).Elem()})
-	// p := unsafe.Pointer(x)
-	// fmt.Println(uintptr(p) + unsafe.Sizeof(p) + uintptr(16))
+func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Json().Success(map[string]string{"name": "cedar"})
 }
