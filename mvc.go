@@ -82,11 +82,17 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if hand != nil {
 	// 	hand.ServeHTTP(w, r)
 	// }
+	co := &Core{
+		writer: w,
+		resp:   r,
+	}
+	for _, v := range autobefore {
+		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
+			reflect.ValueOf(r),
+			reflect.ValueOf(co)})
+	}
 	if handf != nil {
-		handf(w, r, &Core{
-			writer: w,
-			resp:   r,
-		})
+		handf(w, r, co)
 	}
 
 }
@@ -439,7 +445,10 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 	return t
 }
 
-var PluginArr = map[string]reflect.Value{}
+var (
+	pluginArr  = make(map[string]reflect.Value)
+	autobefore = make([]reflect.Value, 0)
+)
 
 // 要求有自动注册插件到Core中去
 // 插件名字 插件结构体
@@ -454,32 +463,32 @@ type plugin struct {
 // 直接从这里加载进插件池
 func (mux *Trie) Plugin(pluginStruct interface{}) {
 	st := reflect.TypeOf(pluginStruct)
-	PluginArr[st.Name()] = reflect.ValueOf(pluginStruct)
+	rv := reflect.ValueOf(pluginStruct)
+	x := rv.MethodByName("AutoStart").Call(nil)
+	autobefore = append(autobefore, x[0])
+	pluginArr[st.Elem().Name()] = rv
+
 }
 
-func (pl *Plugin) AutoStart(w http.ResponseWriter, r *http.Request, co *Core) {
-
-}
+// func (pl *Plugin)AutoStart() interface{}  {
+// 	return nil
+// }
 func (pl *Plugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *Core) {
 
 }
-func (pl *plugin) Call(funcName string, args ...interface{}) interface{} {
+func (pl plugin) Call(funcName string, args ...interface{}) []reflect.Value {
 	arr := make([]reflect.Value, len(args))
-
 	if len(args) != 0 {
 		for k, v := range args {
 			arr[k] = reflect.ValueOf(v)
 		}
-		pl.structs.MethodByName(funcName).Call(arr)
-	} else {
-		pl.structs.MethodByName(funcName).Call(arr)
 	}
-	return nil
+	return pl.structs.MethodByName(funcName).Call(arr)
 }
 
 // 在方法之中使用 插件
-func (co *Core) Plugin(name string) *plugin {
-	return &plugin{
-		structs: PluginArr[name],
+func (co *Core) Plugin(name string) plugin {
+	return plugin{
+		structs: pluginArr[name],
 	}
 }
