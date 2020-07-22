@@ -89,7 +89,8 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for _, v := range autobefore {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
 			reflect.ValueOf(r),
-			reflect.ValueOf(co)})
+			reflect.ValueOf(co)},
+		)
 	}
 	if handf != nil {
 		handf(w, r, co)
@@ -458,6 +459,8 @@ type Plugin struct {
 }
 type plugin struct {
 	structs reflect.Value
+	w       http.ResponseWriter
+	r       *http.Request
 }
 
 // 直接从这里加载进插件池
@@ -483,6 +486,8 @@ func (pl plugin) Call(funcName string, args ...interface{}) []reflect.Value {
 			arr[k] = reflect.ValueOf(v)
 		}
 	}
+	arr = append(arr, reflect.ValueOf(pl.w))
+	arr = append(arr, reflect.ValueOf(pl.r))
 	return pl.structs.MethodByName(funcName).Call(arr)
 }
 
@@ -490,5 +495,7 @@ func (pl plugin) Call(funcName string, args ...interface{}) []reflect.Value {
 func (co *Core) Plugin(name string) plugin {
 	return plugin{
 		structs: pluginArr[name],
+		w:       co.writer,
+		r:       co.resp,
 	}
 }
