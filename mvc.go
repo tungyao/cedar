@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -82,9 +83,28 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// if hand != nil {
 	// 	hand.ServeHTTP(w, r)
 	// }
+	sname := ""
+	if mux.sessionx != nil {
+		c, err := r.Cookie("session")
+		if err == http.ErrNoCookie {
+			x := Sha1(mux.sessionx.CreateUUID([]byte(r.RemoteAddr)))
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session",
+				Value:    string(x),
+				HttpOnly: true, Secure: false, Path: "/",
+				Expires: time.Now().Add(1 * time.Hour), Domain: mux.sessionx.Domino,
+			})
+			sname = string(x)
+		} else {
+			sname = c.Value
+		}
+	}
 	co := &Core{
 		writer: w,
 		resp:   r,
+		Session: Session{
+			Cookie: sname,
+		},
 	}
 	for _, v := range autobefore {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
@@ -241,9 +261,10 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 }
 
 type Core struct {
-	writer http.ResponseWriter
-	resp   *http.Request
-	PL     *Plugin
+	writer  http.ResponseWriter
+	resp    *http.Request
+	PL      *Plugin
+	Session Session
 }
 
 // add new component view render
