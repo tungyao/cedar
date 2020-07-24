@@ -3,6 +3,7 @@ package test
 import (
 	"fmt"
 	"html/template"
+	"math/rand"
 	"net/http"
 	"reflect"
 	"testing"
@@ -121,7 +122,7 @@ func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) 
 func TestSession(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.Get("/set", func(writer http.ResponseWriter, request *http.Request, core *cedar.Core) {
-		core.Session.Set("a", byt("b"))
+		core.Session.Set("a", rand.Intn(1000))
 	}, nil)
 	r.Get("/get", func(writer http.ResponseWriter, request *http.Request, core *cedar.Core) {
 
