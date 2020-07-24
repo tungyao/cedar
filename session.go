@@ -104,7 +104,7 @@ func ComplementHex(s string, x int) string {
 }
 
 // session function
-func (sn Session) Set(key string, body []byte) {
+func (sn Session) Set(key string, body interface{}) {
 	switch OP {
 	case LOCAL:
 		X.Set([]byte(sn.Cookie+key), body, 3600)
