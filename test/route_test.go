@@ -4,7 +4,9 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"reflect"
 	"testing"
+	"unsafe"
 
 	"../../cedar"
 	"./router/v1"
@@ -101,9 +103,12 @@ func TestParam(t *testing.T) {
 	}, nil)
 	http.ListenAndServe(":8000", r)
 }
-
+func byt(s string) []byte {
+	rs := *(*reflect.StringHeader)(unsafe.Pointer(&s))
+	return *(*[]byte)(unsafe.Pointer(&rs))
+}
 func TestAuto(t *testing.T) {
-	r := cedar.NewRouter()
+	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
 	r.AutoRegister(&v1.Auto{})
 	r.AutoRegister(&v1.M2{})
@@ -112,4 +117,15 @@ func TestAuto(t *testing.T) {
 
 func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 	r.Json().Success(map[string]string{"name": "cedar"})
+}
+func TestSession(t *testing.T) {
+	r := cedar.NewRouter("localhost", "localhost")
+	r.Get("/set", func(writer http.ResponseWriter, request *http.Request, core *cedar.Core) {
+		core.Session.Set("a", byt("b"))
+	}, nil)
+	r.Get("/get", func(writer http.ResponseWriter, request *http.Request, core *cedar.Core) {
+
+		fmt.Println(core.Session.Get("a"), 123)
+	}, nil)
+	http.ListenAndServe(":800", r)
 }
