@@ -244,7 +244,7 @@ func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, handler http.Handle
 func (mux *Trie) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, handler, middleName)
 }
-func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request) error) {
+func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
 		Name: name,
 		Fn:   fn,
