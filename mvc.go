@@ -75,14 +75,6 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("<h1>404</h1>"))
 		return
 	}
-	if m := mux.middle[midle]; m != nil {
-		if !m(w, r) {
-			return
-		}
-	}
-	// if hand != nil {
-	// 	hand.ServeHTTP(w, r)
-	// }
 	sname := ""
 	if mux.sessionx != nil {
 		c, err := r.Cookie("session")
@@ -106,6 +98,15 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Cookie: sname,
 		},
 	}
+	if m := mux.middle[midle]; m != nil {
+		if !m(w, r, co) {
+			return
+		}
+	}
+	// if hand != nil {
+	// 	hand.ServeHTTP(w, r)
+	// }
+
 	for _, v := range autobefore {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
 			reflect.ValueOf(r),
@@ -249,7 +250,7 @@ func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.
 		Fn:   fn,
 	})
 }
-func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	fmt.Println("middle =>", name)
 	mux.Middle(name, fn)
 }
