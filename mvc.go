@@ -144,7 +144,7 @@ func (mux *Groups) TRACE(path string, handlerFunc HandlerFunc, handler http.Hand
 func (mux *Groups) OPTIONS(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	mux.Tree.Middleware(name, fn)
 }
 func (mux *Groups) Group(path string, fn func(groups *Groups)) {
