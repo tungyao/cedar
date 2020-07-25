@@ -59,13 +59,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
-	go func() {
-		for k, v := range mux.globalFunc {
-			if err := v.Fn(w, r); err != nil {
-				log.Panicln(k, err)
-			}
-		}
-	}()
+
 	me, handf, _, midle, p := mux.Find(r.URL.Path + "/" + r.Method)
 	r.URL.Fragment = p
 	if r.Method != me {
@@ -98,6 +92,13 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			Cookie: sname,
 		},
 	}
+	go func() {
+		for k, v := range mux.globalFunc {
+			if err := v.Fn(w, r, co); err != nil {
+				log.Panicln(k, err)
+			}
+		}
+	}()
 	if m := mux.middle[midle]; m != nil {
 		if !m(w, r, co) {
 			return
