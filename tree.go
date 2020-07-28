@@ -5,6 +5,7 @@ import (
 	_ "log"
 	"net/http"
 	"strings"
+	"sync"
 )
 
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Core)
@@ -14,7 +15,8 @@ type Trie struct {
 	pattern    string
 	root       *Son
 	globalFunc []*GlobalFunc
-	middle     map[string]func(w http.ResponseWriter, r *http.Request) bool
+	middle     map[string]func(w http.ResponseWriter, r *http.Request, c *Core) bool
+	sessionx   *sessionx
 }
 type Son struct {
 	key           string // /a
@@ -31,7 +33,7 @@ type Son struct {
 }
 type GlobalFunc struct {
 	Name string
-	Fn   func(w http.ResponseWriter, r *http.Request) error
+	Fn   func(w http.ResponseWriter, r *http.Request, co *Core) error
 }
 
 func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Handler, deep int) *Son {
@@ -45,15 +47,28 @@ func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Ha
 		child:       make(map[string]*Son),
 	}
 }
-func NewRouter() *Trie {
+func NewRouter(sessionSetting ...string) *Trie {
 	fmt.Println("-----------Register router-----------")
+	self := "localhost"
+	domino := "localhost"
+	if len(sessionSetting) > 1 {
+		self = sessionSetting[0]
+		domino = sessionSetting[1]
+	}
+	NewSession(0)
 	return &Trie{
 		num: 1,
 		root: NewSon("GET", "/", func(writer http.ResponseWriter, request *http.Request, r *Core) {
 			_, _ = fmt.Fprint(writer, "index")
 		}, nil, 1),
-		middle:  make(map[string]func(w http.ResponseWriter, r *http.Request) bool),
+		middle:  make(map[string]func(w http.ResponseWriter, r *http.Request, c *Core) bool),
 		pattern: "/",
+		sessionx: &sessionx{
+			Mutex:  sync.Mutex{},
+			Self:   byt(self),
+			op:     0,
+			Domino: domino,
+		},
 	}
 }
 func (mux *Trie) Insert(method string, path string, handlerFunc HandlerFunc, handler http.Handler, name []string) {
@@ -94,10 +109,10 @@ func (mux *Trie) Insert(method string, path string, handlerFunc HandlerFunc, han
 					handlerFunc: nil,
 					handler:     nil,
 				}
-				//fuzP, fuzB := fPostion(key)
-				//tson = son.child[key]
-				//tson.fuzzy = fuzB
-				//tson.fuzzyPosition = fuzP
+				// fuzP, fuzB := fPostion(key)
+				// tson = son.child[key]
+				// tson.fuzzy = fuzB
+				// tson.fuzzyPosition = fuzP
 			}
 			fuzP, fuzB := fPostion(key)
 			son.fuzzyPosition = fuzP
@@ -162,7 +177,7 @@ func (mux *Trie) Find(key string) (string, HandlerFunc, http.Handler, string, st
 	}
 	return method, han, hand, son.midle, param
 }
-func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	mux.middle[name] = fn
 }
 func SplitString(str []byte, p []byte) []string {

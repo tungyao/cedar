@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"runtime"
 	"strings"
+	"time"
 	"unsafe"
 )
 
@@ -74,18 +75,38 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("<h1>404</h1>"))
 		return
 	}
+	sname := ""
+	if mux.sessionx != nil {
+		c, err := r.Cookie("session")
+		if err == http.ErrNoCookie {
+			x := Sha1(mux.sessionx.CreateUUID([]byte(r.RemoteAddr)))
+			http.SetCookie(w, &http.Cookie{
+				Name:     "session",
+				Value:    string(x),
+				HttpOnly: true, Secure: false, Path: "/",
+				Expires: time.Now().Add(1 * time.Hour), Domain: mux.sessionx.Domino,
+			})
+			sname = string(x)
+		} else {
+			sname = c.Value
+		}
+	}
+	co := &Core{
+		writer: w,
+		resp:   r,
+		Session: Session{
+			Cookie: sname,
+		},
+	}
 	if m := mux.middle[midle]; m != nil {
-		if !m(w, r) {
+		if !m(w, r, co) {
 			return
 		}
 	}
 	// if hand != nil {
 	// 	hand.ServeHTTP(w, r)
 	// }
-	co := &Core{
-		writer: w,
-		resp:   r,
-	}
+
 	for _, v := range autobefore {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
 			reflect.ValueOf(r),
@@ -125,7 +146,7 @@ func (mux *Groups) TRACE(path string, handlerFunc HandlerFunc, handler http.Hand
 func (mux *Groups) OPTIONS(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	mux.Tree.Middleware(name, fn)
 }
 func (mux *Groups) Group(path string, fn func(groups *Groups)) {
@@ -230,7 +251,7 @@ func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.
 		Fn:   fn,
 	})
 }
-func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request) bool) {
+func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	fmt.Println("middle =>", name)
 	mux.Middle(name, fn)
 }
@@ -242,9 +263,10 @@ func (mux *Trie) Group(path string, fn func(groups *Groups)) {
 }
 
 type Core struct {
-	writer http.ResponseWriter
-	resp   *http.Request
-	PL     *Plugin
+	writer  http.ResponseWriter
+	resp    *http.Request
+	PL      *Plugin
+	Session Session
 }
 
 // add new component view render
