@@ -41,7 +41,7 @@ func TestNormalGlobal(t *testing.T) {
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	http.ListenAndServe(":80", r)
+	http.ListenAndServe(":8000", r)
 }
 func TestGroup(t *testing.T) {
 	r := cedar.NewRouter()

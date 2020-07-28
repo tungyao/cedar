@@ -122,7 +122,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (mux *Groups) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Get(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) HEAD(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Head(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
@@ -131,19 +131,19 @@ func (mux *Groups) Post(path string, handlerFunc HandlerFunc, handler http.Handl
 func (mux *Groups) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Put(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) PATCH(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Patch(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Delete(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) CONNECT(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Connect(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) TRACE(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Trace(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) OPTIONS(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
@@ -387,7 +387,7 @@ func getRouterPath(s string) string {
 	for k, v := range s[i:] {
 		if v > 64 && v < 91 && p != k+i {
 			o += strings.ToLower(s[p:k+i]) + "/"
-			p = k
+			p = k + i
 		}
 	}
 	o += strings.ToLower(s[p:])
