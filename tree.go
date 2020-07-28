@@ -33,7 +33,7 @@ type Son struct {
 }
 type GlobalFunc struct {
 	Name string
-	Fn   func(w http.ResponseWriter, r *http.Request) error
+	Fn   func(w http.ResponseWriter, r *http.Request, co *Core) error
 }
 
 func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Handler, deep int) *Son {
