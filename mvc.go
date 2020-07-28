@@ -379,16 +379,15 @@ func getTemplatePath(s string) string {
 func getRouterPath(s string) string {
 	p := 0
 	o := ""
-	for k, v := range s[1:] {
-		if v > 64 && v < 91 {
-			if p == 0 {
-				if s[p:k+1] != "Page" {
-					return ""
-				}
-				p = k + 1
-			}
-			o += strings.ToLower(s[p:k+1]) + "/"
-			p = k + 1
+	i := 0
+	if s[p:4] == "Page" {
+		i = 4
+		p = 4
+	}
+	for k, v := range s[i:] {
+		if v > 64 && v < 91 && p != k+i {
+			o += strings.ToLower(s[p:k+i]) + "/"
+			p = k
 		}
 	}
 	o += strings.ToLower(s[p:])
@@ -433,14 +432,14 @@ type AutoRegister struct {
 }
 
 func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
-	// spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
-	// pkgName := spPkg[len(spPkg)-1]
+	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
+	pkgName := spPkg[len(spPkg)-1] + "/"
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
 		mName := reflect.TypeOf(auto).Method(i).Name
 		fuc := reflect.ValueOf(auto).MethodByName(mName)
 		// 判断是不是中间件构成
 		if mName[:6] == "Middle" {
-			reflect.ValueOf(mux).MethodByName("Middleware").Call([]reflect.Value{reflect.ValueOf(strings.ToLower(mName[6:])), reflect.ValueOf(fuc.Interface().(func(w http.ResponseWriter, r *http.Request) bool))})
+			reflect.ValueOf(mux).MethodByName("Middleware").Call([]reflect.Value{reflect.ValueOf(strings.ToLower(mName[6:])), reflect.ValueOf(fuc.Interface().(func(w http.ResponseWriter, r *http.Request, co *Core) bool))})
 			continue
 		}
 		x := fuc.Interface().(func(writer http.ResponseWriter, request *http.Request, core *Core))
@@ -448,15 +447,17 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 		ma := strings.Split(mName, "_")
 		if len(ma) == 2 {
 			mName = ma[1]
+			mName = getRouterPath(mName)
 		} else if len(ma) > 2 {
 			mName = ma[len(ma)-1]
 			if mName == "" {
 				mName = ma[len(ma)-2]
 			}
+			mName = getRouterPath(mName)
 		}
 		in := make([]reflect.Value, 0)
-		// in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
-		in = append(in, reflect.ValueOf(getRouterPath(mName)))
+		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		// in = append(in, reflect.ValueOf(mName))
 		in = append(in, reflect.ValueOf(x))
 		in = append(in, reflect.ValueOf(http.Handler(mux)))
 		for i := 0; i < len(ma)-2; i++ {
