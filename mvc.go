@@ -122,7 +122,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 func (mux *Groups) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Get(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) HEAD(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Head(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
@@ -131,19 +131,19 @@ func (mux *Groups) Post(path string, handlerFunc HandlerFunc, handler http.Handl
 func (mux *Groups) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Put(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) PATCH(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Patch(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Delete(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) CONNECT(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Connect(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) TRACE(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Trace(mux.Path+path, handlerFunc, handler, middleName...)
 }
-func (mux *Groups) OPTIONS(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
+func (mux *Groups) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
 	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
 }
 func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
@@ -379,16 +379,15 @@ func getTemplatePath(s string) string {
 func getRouterPath(s string) string {
 	p := 0
 	o := ""
-	for k, v := range s[1:] {
-		if v > 64 && v < 91 {
-			if p == 0 {
-				if s[p:k+1] != "Page" {
-					return ""
-				}
-				p = k + 1
-			}
-			o += strings.ToLower(s[p:k+1]) + "/"
-			p = k + 1
+	i := 0
+	if s[p:4] == "Page" {
+		i = 4
+		p = 4
+	}
+	for k, v := range s[i:] {
+		if v > 64 && v < 91 && p != k+i {
+			o += strings.ToLower(s[p:k+i]) + "/"
+			p = k + i
 		}
 	}
 	o += strings.ToLower(s[p:])
@@ -433,14 +432,14 @@ type AutoRegister struct {
 }
 
 func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
-	// spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
-	// pkgName := spPkg[len(spPkg)-1]
+	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
+	pkgName := spPkg[len(spPkg)-1] + "/"
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
 		mName := reflect.TypeOf(auto).Method(i).Name
 		fuc := reflect.ValueOf(auto).MethodByName(mName)
 		// 判断是不是中间件构成
 		if mName[:6] == "Middle" {
-			reflect.ValueOf(mux).MethodByName("Middleware").Call([]reflect.Value{reflect.ValueOf(strings.ToLower(mName[6:])), reflect.ValueOf(fuc.Interface().(func(w http.ResponseWriter, r *http.Request) bool))})
+			reflect.ValueOf(mux).MethodByName("Middleware").Call([]reflect.Value{reflect.ValueOf(strings.ToLower(mName[6:])), reflect.ValueOf(fuc.Interface().(func(w http.ResponseWriter, r *http.Request, co *Core) bool))})
 			continue
 		}
 		x := fuc.Interface().(func(writer http.ResponseWriter, request *http.Request, core *Core))
@@ -448,15 +447,17 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 		ma := strings.Split(mName, "_")
 		if len(ma) == 2 {
 			mName = ma[1]
+			mName = getRouterPath(mName)
 		} else if len(ma) > 2 {
 			mName = ma[len(ma)-1]
 			if mName == "" {
 				mName = ma[len(ma)-2]
 			}
+			mName = getRouterPath(mName)
 		}
 		in := make([]reflect.Value, 0)
-		// in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
-		in = append(in, reflect.ValueOf(getRouterPath(mName)))
+		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		// in = append(in, reflect.ValueOf(mName))
 		in = append(in, reflect.ValueOf(x))
 		in = append(in, reflect.ValueOf(http.Handler(mux)))
 		for i := 0; i < len(ma)-2; i++ {
