@@ -1,3 +1,3 @@
-module github.com/tungyao/cedar v1
+module github.com/tungyao/cedar
 
 go 1.14
