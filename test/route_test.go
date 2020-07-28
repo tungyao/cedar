@@ -41,11 +41,11 @@ func TestNormalGlobal(t *testing.T) {
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("helloxxxkk"))
 	}, nil)
-	http.ListenAndServe(":80", r)
+	http.ListenAndServe(":8000", r)
 }
 func TestGroup(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Middleware("test", func(w http.ResponseWriter, r *http.Request) bool {
+	r.Middleware("test", func(w http.ResponseWriter, r *http.Request, c *cedar.Core) bool {
 		http.Redirect(w, r, "/a/b/c", 302)
 		return false
 	})
@@ -112,7 +112,6 @@ func TestAuto(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
 	r.AutoRegister(&v1.Auto{})
-	r.AutoRegister(&v1.M2{})
 	http.ListenAndServe(":8000", r)
 }
 
