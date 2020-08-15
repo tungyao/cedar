@@ -59,37 +59,40 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeStaticFile(r.URL.Path, filename, w)
 		return
 	}
-
-	me, handf, _, midle, p := mux.Find(r.URL.Path + "/" + r.Method)
-	r.URL.Fragment = p
-	if r.Method != me {
+	_, hand, handler, middle, p, ok := mux.Find(r.URL.Path, r.Method)
+	if !ok {
 		w.Header().Set("Content-type", "text/html")
 		w.Header().Set("charset", "UTF-8")
 		w.WriteHeader(404)
-		_, _ = w.Write([]byte("<h1>404</h1>"))
+		_, _ = w.Write([]byte("404"))
 		return
 	}
-	sname := ""
-	if mux.sessionx != nil {
+	if handler != nil {
+		handler.ServeHTTP(w, r)
+		return
+	}
+	r.URL.Fragment = p
+	name := ""
+	if mux.sessions != nil {
 		c, err := r.Cookie("session")
 		if err == http.ErrNoCookie {
-			x := Sha1(mux.sessionx.CreateUUID([]byte(r.RemoteAddr)))
+			x := Sha1(mux.sessions.CreateUUID([]byte(r.RemoteAddr)))
 			http.SetCookie(w, &http.Cookie{
 				Name:     "session",
 				Value:    string(x),
 				HttpOnly: true, Secure: false, Path: "/",
-				Expires: time.Now().Add(1 * time.Hour), Domain: mux.sessionx.Domino,
+				Expires: time.Now().Add(1 * time.Hour), Domain: mux.sessions.Domino,
 			})
-			sname = string(x)
+			name = string(x)
 		} else {
-			sname = c.Value
+			name = c.Value
 		}
 	}
 	co := &Core{
 		writer: w,
 		resp:   r,
 		Session: Session{
-			Cookie: sname,
+			Cookie: name,
 		},
 	}
 	go func() {
@@ -99,52 +102,49 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}()
-	if m := mux.middle[midle]; m != nil {
+	if m := mux.middle[middle]; m != nil {
 		if !m(w, r, co) {
 			return
 		}
 	}
-	// if hand != nil {
-	// 	hand.ServeHTTP(w, r)
-	// }
-
 	for _, v := range autobefore {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
 			reflect.ValueOf(r),
 			reflect.ValueOf(co)})
 	}
-	if handf != nil {
-		handf(w, r, co)
+	if hand != nil {
+		hand(w, r, co)
 	}
 
 }
 
-func (mux *Groups) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Get(mux.Path+path, handlerFunc, handler, middleName...)
+// handFunc
+func (mux *Groups) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Get(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Head(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Head(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Head(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Post(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Post(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Post(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Put(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Put(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Put(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Patch(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Patch(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Patch(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Delete(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Delete(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Delete(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Connect(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Connect(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Connect(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Trace(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Trace(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Trace(mux.Path+path, handlerFunc, middleName...)
 }
-func (mux *Groups) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Tree.Options(mux.Path+path, handlerFunc, handler, middleName...)
+func (mux *Groups) Options(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.Tree.Options(mux.Path+path, handlerFunc, middleName...)
 }
 func (mux *Groups) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	mux.Tree.Middleware(name, fn)
@@ -215,35 +215,35 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	for _, v := range dy {
 		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
 			writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
-		}, nil)
+		})
 	}
 }
-func (mux *Trie) Get(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodGet, path+"/GET", handlerFunc, handler, middleName)
+func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)
 }
-func (mux *Trie) Head(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodHead, path+"/HEAD", handlerFunc, handler, middleName)
+func (mux *Trie) Head(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodHead, path+"/HEAD", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Post(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPost, path+"/POST", handlerFunc, handler, middleName)
+func (mux *Trie) Post(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPost, path, handlerFunc, nil, middleName)
 }
-func (mux *Trie) Put(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPut, path+"/PUT", handlerFunc, handler, middleName)
+func (mux *Trie) Put(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPut, path+"/PUT", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodPatch, path+"/PATCH", handlerFunc, handler, middleName)
+func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPatch, path+"/PATCH", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodDelete, path+"/DELETE", handlerFunc, handler, middleName)
+func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodDelete, path+"/DELETE", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodConnect, path+"/CONNECT", handlerFunc, handler, middleName)
+func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodConnect, path+"/CONNECT", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodTrace, path+"/TRACE", handlerFunc, handler, middleName)
+func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodTrace, path+"/TRACE", handlerFunc, nil, middleName)
 }
-func (mux *Trie) Options(path string, handlerFunc HandlerFunc, handler http.Handler, middleName ...string) {
-	mux.Insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, handler, middleName)
+func (mux *Trie) Options(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, nil, middleName)
 }
 func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
@@ -459,7 +459,7 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
 		// in = append(in, reflect.ValueOf(mName))
 		in = append(in, reflect.ValueOf(x))
-		in = append(in, reflect.ValueOf(http.Handler(mux)))
+		// in = append(in, reflect.ValueOf(reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())))
 		for i := 0; i < len(ma)-2; i++ {
 			in = append(in, reflect.ValueOf(strings.ToLower(ma[1+i])))
 		}
