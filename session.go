@@ -15,7 +15,7 @@ import (
 // 现版本是只能启用 LOCAL模式
 var (
 	X  *spruce.Hash
-	OP int = -1
+	OP = -1
 )
 
 const (
@@ -38,11 +38,11 @@ func NewSession(types int) {
 // stop session
 
 func (mux *Trie) StopSession() {
-	mux.sessionx = nil
+	mux.sessions = nil
 }
 
 // struct
-type sessionx struct {
+type sessions struct {
 	sync.Mutex
 	Self   []byte
 	op     int
@@ -62,7 +62,7 @@ type SX struct {
 // }
 // UUID 64 bit
 // 8-4-4-12 16hex string
-func (si *sessionx) CreateUUID(xtr []byte) []byte {
+func (si *sessions) CreateUUID(xtr []byte) []byte {
 	str := fmt.Sprintf("%x", xtr)
 	strLow := ComplementHex(str[:(len(str)-1)/3], 8)
 	strMid := ComplementHex(str[(len(str)-1)/3:(len(str)-1)*2/3], 4)
