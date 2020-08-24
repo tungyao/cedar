@@ -1,9 +1,11 @@
 package cedar
 
 import (
+	"bufio"
 	json2 "encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -22,8 +24,11 @@ type Groups struct {
 	Path string
 }
 type DynamicRoute struct {
-	Path string
-	View string
+	Path      string `dynamic:"path"`
+	View      string `dynamic:"view"`
+	Method    string `dynamic:"method"`
+	Type      string `dynamic:"type"`
+	ProxyPass string `dynamic:"proxy_pass"`
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
@@ -156,66 +161,87 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
-func (mux *Trie) Dynamic(ymlPath string) {
-	defer func() {
-		x := recover()
-		if x != nil {
-			log.Panic(x)
-		}
-	}()
-	fs, err := os.Open(ymlPath)
+func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
+	// defer func() {
+	// 	x := recover()
+	// 	if x != nil {
+	// 		log.Panic(x)
+	// 	}
+	// }()
+	// fs, err := os.Open(ymlPath)
+	// if err != nil {
+	// 	log.Panic(91, err)
+	// }
+	// defer fs.Close()
+	// all, _ := ioutil.ReadAll(fs)
+	// var enterStyle = 0
+	// var lastChar = 0
+	// var dy = make(map[string]*DynamicRoute, 0)
+	// for k, v := range all {
+	// 	if v == 13 {
+	// 		if all[k+1] == 10 {
+	// 			enterStyle = 0 // windows
+	// 		} else {
+	// 			enterStyle = 1 // unix
+	// 		}
+	// 		break
+	// 	}
+	// }
+	// var path = ""
+	// for k, v := range all {
+	// 	if v == 13 {
+	// 		if enterStyle == 0 {
+	// 			for j, c := range all[lastChar:k] {
+	// 				if c == 58 {
+	// 					if path == "" {
+	// 						path = string(all[lastChar:k][j+2:])
+	// 						break
+	// 					} else if path != "" {
+	// 						dy[path] = &DynamicRoute{
+	// 							path,
+	// 							string(all[lastChar:k][j+2:]),
+	// 						}
+	// 						path = ""
+	// 						break
+	// 					}
+	// 				}
+	// 			}
+	// 			lastChar = k + 2
+	// 			continue
+	// 		} else {
+	// 			lastChar = k
+	// 		}
+	// 	}
+	// }
+	// dy[path] = &DynamicRoute{
+	// 	path,
+	// 	string(all[lastChar+8 : len(all)]),
+	// }
+	// for _, v := range dy {
+	// 	mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
+	// 		writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
+	// 	})
+	// }
+	f, err := os.Open(ymlPath)
 	if err != nil {
-		log.Panic(91, err)
+		panic(err)
 	}
-	defer fs.Close()
-	all, _ := ioutil.ReadAll(fs)
-	var enterStyle = 0
-	var lastChar = 0
-	var dy = make(map[string]*DynamicRoute, 0)
-	for k, v := range all {
-		if v == 13 {
-			if all[k+1] == 10 {
-				enterStyle = 0 // windows
-			} else {
-				enterStyle = 1 // unix
-			}
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	point := false
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil || io.EOF == err {
 			break
 		}
-	}
-	var path = ""
-	for k, v := range all {
-		if v == 13 {
-			if enterStyle == 0 {
-				for j, c := range all[lastChar:k] {
-					if c == 58 {
-						if path == "" {
-							path = string(all[lastChar:k][j+2:])
-							break
-						} else if path != "" {
-							dy[path] = &DynamicRoute{
-								path,
-								string(all[lastChar:k][j+2:]),
-							}
-							path = ""
-							break
-						}
-					}
-				}
-				lastChar = k + 2
-				continue
-			} else {
-				lastChar = k
-			}
+		// fmt.Println(line)
+		if line[0] == '-' {
+			point = true // 开始计算
 		}
 	}
-	dy[path] = &DynamicRoute{
-		path,
-		string(all[lastChar+8 : len(all)]),
-	}
-	for _, v := range dy {
-		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
-			writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
-		})
+	fmt.Println(point)
+	if route != nil {
+
 	}
 }
 func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
