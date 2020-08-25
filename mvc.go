@@ -24,6 +24,7 @@ type Groups struct {
 	Path string
 }
 type DynamicRoute struct {
+	Name      string `dynamic:"name"`
 	Path      string `dynamic:"path"`
 	View      string `dynamic:"view"`
 	Method    string `dynamic:"method"`
@@ -229,20 +230,81 @@ func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
 	defer f.Close()
 	rd := bufio.NewReader(f)
 	point := false
+	var dy = make(map[string]*DynamicRoute, 0)
+	var single = &DynamicRoute{}
+	// 得弄个排序出来
+	var sortTag = map[string]int{}
+	typ := reflect.TypeOf(single)
+	v := reflect.ValueOf(single).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		tag := typ.Elem().Field(i).Tag.Get("dynamic")
+		sortTag[tag] = i
+	}
 	for {
 		line, err := rd.ReadString('\n')
 		if err != nil || io.EOF == err {
 			break
 		}
 		// fmt.Println(line)
+		if line[0] == '#' {
+			continue
+		}
+		if point {
+			if line[0] == '-' {
+				// fmt.Println(single)
+				point = false
+				goto ct
+			}
+			kp := 0
+			for k, v := range line {
+				if v == ':' {
+					kp = k
+					break
+				}
+			}
+			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
+			if single.Name != "" {
+				dy[single.Name] = single
+			}
+			continue
+		}
+		goto ct
+	ct:
 		if line[0] == '-' {
 			point = true // 开始计算
+			single = &DynamicRoute{}
+			// 解析开始
+			kp := 0
+			for k, v := range line {
+				if v == ':' {
+					kp = k
+					break
+				}
+			}
+			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
 		}
 	}
-	fmt.Println(point)
-	if route != nil {
-
+	// if route != nil {
+	//
+	// }
+	fmt.Println(dy)
+}
+func filter(s []byte) string {
+	sr := make([]byte, 0)
+	// 清除前面的空格符号
+	for k, v := range s {
+		if v != ' ' {
+			s = s[k:]
+			break
+		}
 	}
+	// 清除后面的换行 符号
+	for _, v := range s {
+		if v != '\n' && v != '\r' {
+			sr = append(sr, v)
+		}
+	}
+	return string(sr)
 }
 func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
 	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)

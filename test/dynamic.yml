@@ -1,9 +1,11 @@
 - path: /dynamic/day
+  name: aaa
   type: proxy
   method: GET
   view: /static/dynamic1.html
   proxy_pass: http://127.0.0.1:8000/
 - path: /asdasd/day2
-  type: normal
-  method: static
+  type: static
+  name: bbb
+  method: GET
   view: /static/dynamic2.html
