@@ -90,7 +90,7 @@ func TestAuto(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
 	r.AutoRegister(&v1.Auto{})
-	http.ListenAndServe(":8000", r)
+	http.ListenAndServe(":7000", r)
 }
 
 func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {

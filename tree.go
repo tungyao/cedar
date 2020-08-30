@@ -271,7 +271,7 @@ func getParam(position, path string) string {
 	if len(position) > len(path)-1 {
 		return ""
 	}
-	kx := len(path)
+	kx := 0
 	for k, v := range path[len(position):] {
 		if v == '/' {
 			kx = k
