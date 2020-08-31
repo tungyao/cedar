@@ -417,6 +417,39 @@ func (co *Core) Byte(s string) []byte {
 func (co *Core) String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
+
+// 2020/8/31
+// add basic auth component
+// arg doubles include name and pass like this
+// BasicAuth("user","pass","user2","pass2") , it's true
+// BasicAuth("user","pass","user2") , it's false
+func (co *Core) BasicAuth(args ...string) bool {
+	if len(args)%2 != 0 {
+		http.Error(co.writer, " args failed", 503)
+		return true
+	}
+	user, pass, ok := co.resp.BasicAuth()
+	if !ok {
+		co.writer.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		co.writer.WriteHeader(http.StatusUnauthorized)
+		return true
+	}
+	check := false
+	for i := 0; i < len(args)-2; i += 2 {
+		if user != args[i] && pass != args[i+1] {
+			check = true
+		} else {
+			check = false
+			break
+		}
+	}
+	if check {
+		http.Error(co.writer, " need authorized!", http.StatusUnauthorized)
+		return true
+	}
+	return false
+}
+
 func byt(s string) []byte {
 	rs := *(*reflect.StringHeader)(unsafe.Pointer(&s))
 	return *(*[]byte)(unsafe.Pointer(&rs))
