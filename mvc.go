@@ -576,15 +576,35 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 			}
 			mName = getRouterPath(mName)
 		}
-		in := make([]reflect.Value, 0)
-		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		// in := make([]reflect.Value, 0)
+		// in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
 		// in = append(in, reflect.ValueOf(mName))
-		in = append(in, reflect.ValueOf(x))
+		// in = append(in, reflect.ValueOf(x))
 		// in = append(in, reflect.ValueOf(reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())))
+		in := make([]string, 0)
 		for i := 0; i < len(ma)-2; i++ {
-			in = append(in, reflect.ValueOf(strings.ToLower(ma[1+i])))
+			in = append(in, strings.ToLower(ma[1+i]))
 		}
-		reflect.ValueOf(mux).MethodByName(ma[0]).Call(in)
+		// 在这里可能会出现意外卡住 【已解决】
+		go func() {
+			switch ma[0] {
+			case "Get":
+				mux.Get("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Post":
+				mux.Post("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Put":
+				mux.Put("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Delete":
+				mux.Delete("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Connect":
+				mux.Connect("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Options":
+				mux.Options("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Trace":
+				mux.Trace("/"+pkgName+getRouterPath(mName), x, in...)
+			}
+		}()
+		// go reflect.ValueOf(mux).MethodByName(ma[0]).Call(in)
 	}
 	t := &AutoRegister{}
 	return t
