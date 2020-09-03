@@ -11,16 +11,6 @@ import (
 	"./router/v1"
 )
 
-func TestDynamic(t *testing.T) {
-	r := cedar.NewRouter()
-	r.Dynamic("dynamic.yml")
-	r.Get("/reset", func(writer http.ResponseWriter, request *http.Request, co *cedar.Core) {
-		r.Dynamic("dynamic.yml")
-		writer.Write([]byte("refused success"))
-	})
-	http.ListenAndServe(":80", r)
-
-}
 func TestNormalGlobal(t *testing.T) {
 	r := cedar.NewRouter()
 	r.Get("/k", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
@@ -100,7 +90,7 @@ func TestAuto(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
 	r.AutoRegister(&v1.Auto{})
-	http.ListenAndServe(":8000", r)
+	http.ListenAndServe(":7000", r)
 }
 
 func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
@@ -123,4 +113,9 @@ func TestSession(t *testing.T) {
 		fmt.Println(core.Session.Get("a"), 123)
 	})
 	http.ListenAndServe(":8000", r)
+}
+
+func TestProxyPass(t *testing.T) {
+	r := cedar.NewRouter("localhost", "localhost")
+	r.Dynamic("./dynamic.yml", nil)
 }

@@ -1,9 +1,11 @@
 package cedar
 
 import (
+	"bufio"
 	json2 "encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -22,8 +24,12 @@ type Groups struct {
 	Path string
 }
 type DynamicRoute struct {
-	Path string
-	View string
+	Name      string `dynamic:"name"`
+	Path      string `dynamic:"path"`
+	View      string `dynamic:"view"`
+	Method    string `dynamic:"method"`
+	Type      string `dynamic:"type"`
+	ProxyPass string `dynamic:"proxy_pass"`
 }
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
@@ -156,67 +162,149 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
-func (mux *Trie) Dynamic(ymlPath string) {
-	defer func() {
-		x := recover()
-		if x != nil {
-			log.Panic(x)
-		}
-	}()
-	fs, err := os.Open(ymlPath)
+func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
+	// defer func() {
+	// 	x := recover()
+	// 	if x != nil {
+	// 		log.Panic(x)
+	// 	}
+	// }()
+	// fs, err := os.Open(ymlPath)
+	// if err != nil {
+	// 	log.Panic(91, err)
+	// }
+	// defer fs.Close()
+	// all, _ := ioutil.ReadAll(fs)
+	// var enterStyle = 0
+	// var lastChar = 0
+	// var dy = make(map[string]*DynamicRoute, 0)
+	// for k, v := range all {
+	// 	if v == 13 {
+	// 		if all[k+1] == 10 {
+	// 			enterStyle = 0 // windows
+	// 		} else {
+	// 			enterStyle = 1 // unix
+	// 		}
+	// 		break
+	// 	}
+	// }
+	// var path = ""
+	// for k, v := range all {
+	// 	if v == 13 {
+	// 		if enterStyle == 0 {
+	// 			for j, c := range all[lastChar:k] {
+	// 				if c == 58 {
+	// 					if path == "" {
+	// 						path = string(all[lastChar:k][j+2:])
+	// 						break
+	// 					} else if path != "" {
+	// 						dy[path] = &DynamicRoute{
+	// 							path,
+	// 							string(all[lastChar:k][j+2:]),
+	// 						}
+	// 						path = ""
+	// 						break
+	// 					}
+	// 				}
+	// 			}
+	// 			lastChar = k + 2
+	// 			continue
+	// 		} else {
+	// 			lastChar = k
+	// 		}
+	// 	}
+	// }
+	// dy[path] = &DynamicRoute{
+	// 	path,
+	// 	string(all[lastChar+8 : len(all)]),
+	// }
+	// for _, v := range dy {
+	// 	mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
+	// 		writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
+	// 	})
+	// }
+	f, err := os.Open(ymlPath)
 	if err != nil {
-		log.Panic(91, err)
+		panic(err)
 	}
-	defer fs.Close()
-	all, _ := ioutil.ReadAll(fs)
-	var enterStyle = 0
-	var lastChar = 0
+	defer f.Close()
+	rd := bufio.NewReader(f)
+	point := false
 	var dy = make(map[string]*DynamicRoute, 0)
-	for k, v := range all {
-		if v == 13 {
-			if all[k+1] == 10 {
-				enterStyle = 0 // windows
-			} else {
-				enterStyle = 1 // unix
+	var single = &DynamicRoute{}
+	// 得弄个排序出来
+	var sortTag = map[string]int{}
+	typ := reflect.TypeOf(single)
+	v := reflect.ValueOf(single).Elem()
+	for i := 0; i < v.NumField(); i++ {
+		tag := typ.Elem().Field(i).Tag.Get("dynamic")
+		sortTag[tag] = i
+	}
+	for {
+		line, err := rd.ReadString('\n')
+		if err != nil || io.EOF == err {
+			break
+		}
+		// fmt.Println(line)
+		if line[0] == '#' {
+			continue
+		}
+		if point {
+			if line[0] == '-' {
+				// fmt.Println(single)
+				point = false
+				goto ct
 			}
+			kp := 0
+			for k, v := range line {
+				if v == ':' {
+					kp = k
+					break
+				}
+			}
+			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
+			if single.Name != "" {
+				dy[single.Name] = single
+			}
+			continue
+		}
+		goto ct
+	ct:
+		if line[0] == '-' {
+			point = true // 开始计算
+			single = &DynamicRoute{}
+			// 解析开始
+			kp := 0
+			for k, v := range line {
+				if v == ':' {
+					kp = k
+					break
+				}
+			}
+			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
+		}
+	}
+	// if route != nil {
+	//
+	// }
+	fmt.Println(dy)
+}
+func filter(s []byte) string {
+	sr := make([]byte, 0)
+	// 清除前面的空格符号
+	for k, v := range s {
+		if v != ' ' {
+			s = s[k:]
 			break
 		}
 	}
-	var path = ""
-	for k, v := range all {
-		if v == 13 {
-			if enterStyle == 0 {
-				for j, c := range all[lastChar:k] {
-					if c == 58 {
-						if path == "" {
-							path = string(all[lastChar:k][j+2:])
-							break
-						} else if path != "" {
-							dy[path] = &DynamicRoute{
-								path,
-								string(all[lastChar:k][j+2:]),
-							}
-							path = ""
-							break
-						}
-					}
-				}
-				lastChar = k + 2
-				continue
-			} else {
-				lastChar = k
-			}
+	// 清除后面的换行 符号
+	for _, v := range s {
+		if v != '\n' && v != '\r' {
+			sr = append(sr, v)
 		}
 	}
-	dy[path] = &DynamicRoute{
-		path,
-		string(all[lastChar+8 : len(all)]),
-	}
-	for _, v := range dy {
-		mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
-			writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
-		})
-	}
+	return string(sr)
 }
 func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
 	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)
@@ -329,6 +417,39 @@ func (co *Core) Byte(s string) []byte {
 func (co *Core) String(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
+
+// 2020/8/31
+// add basic auth component
+// arg doubles include name and pass like this
+// BasicAuth("user","pass","user2","pass2") , it's true
+// BasicAuth("user","pass","user2") , it's false
+func (co *Core) BasicAuth(args ...string) bool {
+	if len(args)%2 != 0 {
+		http.Error(co.writer, " args failed", 503)
+		return true
+	}
+	user, pass, ok := co.resp.BasicAuth()
+	if !ok {
+		co.writer.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+		co.writer.WriteHeader(http.StatusUnauthorized)
+		return true
+	}
+	check := false
+	for i := 0; i < len(args)-2; i += 2 {
+		if user != args[i] && pass != args[i+1] {
+			check = true
+		} else {
+			check = false
+			break
+		}
+	}
+	if check {
+		http.Error(co.writer, " need authorized!", http.StatusUnauthorized)
+		return true
+	}
+	return false
+}
+
 func byt(s string) []byte {
 	rs := *(*reflect.StringHeader)(unsafe.Pointer(&s))
 	return *(*[]byte)(unsafe.Pointer(&rs))
@@ -455,15 +576,35 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 			}
 			mName = getRouterPath(mName)
 		}
-		in := make([]reflect.Value, 0)
-		in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
+		// in := make([]reflect.Value, 0)
+		// in = append(in, reflect.ValueOf("/"+pkgName+getRouterPath(mName)))
 		// in = append(in, reflect.ValueOf(mName))
-		in = append(in, reflect.ValueOf(x))
+		// in = append(in, reflect.ValueOf(x))
 		// in = append(in, reflect.ValueOf(reflect.Zero(reflect.TypeOf((*error)(nil)).Elem())))
+		in := make([]string, 0)
 		for i := 0; i < len(ma)-2; i++ {
-			in = append(in, reflect.ValueOf(strings.ToLower(ma[1+i])))
+			in = append(in, strings.ToLower(ma[1+i]))
 		}
-		reflect.ValueOf(mux).MethodByName(ma[0]).Call(in)
+		// 在这里可能会出现意外卡住 【已解决】
+		go func() {
+			switch ma[0] {
+			case "Get":
+				mux.Get("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Post":
+				mux.Post("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Put":
+				mux.Put("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Delete":
+				mux.Delete("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Connect":
+				mux.Connect("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Options":
+				mux.Options("/"+pkgName+getRouterPath(mName), x, in...)
+			case "Trace":
+				mux.Trace("/"+pkgName+getRouterPath(mName), x, in...)
+			}
+		}()
+		// go reflect.ValueOf(mux).MethodByName(ma[0]).Call(in)
 	}
 	t := &AutoRegister{}
 	return t
