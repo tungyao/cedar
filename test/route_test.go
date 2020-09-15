@@ -115,7 +115,8 @@ func TestSession(t *testing.T) {
 	http.ListenAndServe(":8000", r)
 }
 
-func TestProxyPass(t *testing.T) {
-	r := cedar.NewRouter("localhost", "localhost")
-	r.Dynamic("./dynamic.yml", nil)
+func TestDynamic(t *testing.T) {
+	r := cedar.NewRouter()
+	r.Dynamic("./dynamic.yml")
+	http.ListenAndServe(":80", r)
 }

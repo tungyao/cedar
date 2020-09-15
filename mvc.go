@@ -5,7 +5,6 @@ import (
 	json2 "encoding/json"
 	"fmt"
 	"html/template"
-	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -162,7 +161,7 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
-func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
+func (mux *Trie) Dynamic(ymlPath string) {
 	// defer func() {
 	// 	x := recover()
 	// 	if x != nil {
@@ -241,11 +240,10 @@ func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
 		sortTag[tag] = i
 	}
 	for {
-		line, err := rd.ReadString('\n')
-		if err != nil || io.EOF == err {
+		line, err := rd.ReadBytes('\n')
+		if err != nil || len(line) == 0 {
 			break
 		}
-		// fmt.Println(line)
 		if line[0] == '#' {
 			continue
 		}
@@ -262,7 +260,7 @@ func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
 					break
 				}
 			}
-			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
+			reflect.ValueOf(single).Elem().Field(sortTag[string(line[2:kp])]).SetString(filter(line[kp+1:]))
 			if single.Name != "" {
 				dy[single.Name] = single
 			}
@@ -281,13 +279,15 @@ func (mux *Trie) Dynamic(ymlPath string, route *DynamicRoute) {
 					break
 				}
 			}
-			reflect.ValueOf(single).Elem().Field(sortTag[line[2:kp]]).SetString(filter([]byte(line[kp+1:])))
+			reflect.ValueOf(single).Elem().Field(sortTag[string(line[2:kp])]).SetString(filter(line[kp+1:]))
 		}
 	}
 	// if route != nil {
 	//
 	// }
-	fmt.Println(dy)
+	for _, v := range dy {
+		fmt.Println(v)
+	}
 }
 func filter(s []byte) string {
 	sr := make([]byte, 0)
