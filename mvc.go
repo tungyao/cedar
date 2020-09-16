@@ -287,6 +287,7 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	// }
 	for _, v := range dy {
 		fmt.Println(v)
+
 	}
 }
 func filter(s []byte) string {
