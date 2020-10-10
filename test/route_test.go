@@ -13,7 +13,7 @@ import (
 
 func TestNormalGlobal(t *testing.T) {
 	r := cedar.NewRouter()
-	r.Get("/k", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
+	r.Get("/", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		writer.Write([]byte("helloxxx"))
 	})
 	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
@@ -90,7 +90,7 @@ func TestAuto(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
 	r.AutoRegister(&v1.Auto{})
-	http.ListenAndServe(":7000", r)
+	http.ListenAndServe(":8000", r)
 }
 
 func AppIndex(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {

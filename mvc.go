@@ -5,6 +5,7 @@ import (
 	json2 "encoding/json"
 	"fmt"
 	"html/template"
+	"io"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -161,67 +162,67 @@ func (mux *Groups) Group(path string, fn func(groups *Groups)) {
 	fn(g)
 }
 
+func filter(s []byte) string {
+	sr := make([]byte, 0)
+	// 清除前面的空格符号
+	for k, v := range s {
+		if v != ' ' {
+			s = s[k:]
+			break
+		}
+	}
+	// 清除后面的换行 符号
+	for _, v := range s {
+		if v != '\n' && v != '\r' {
+			sr = append(sr, v)
+		}
+	}
+	return string(sr)
+}
+func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)
+}
+func (mux *Trie) Head(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodHead, path+"/HEAD", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Post(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPost, path, handlerFunc, nil, middleName)
+}
+func (mux *Trie) Put(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPut, path+"/PUT", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodPatch, path+"/PATCH", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodDelete, path+"/DELETE", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodConnect, path+"/CONNECT", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodTrace, path+"/TRACE", handlerFunc, nil, middleName)
+}
+func (mux *Trie) Options(path string, handlerFunc HandlerFunc, middleName ...string) {
+	mux.insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, nil, middleName)
+}
+func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) error) {
+	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
+		Name: name,
+		Fn:   fn,
+	})
+}
+func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
+	fmt.Println("middle =>", name)
+	mux.Middle(name, fn)
+}
+func (mux *Trie) Group(path string, fn func(groups *Groups)) {
+	g := new(Groups)
+	g.Tree = mux
+	g.Path = path
+	fn(g)
+}
 func (mux *Trie) Dynamic(ymlPath string) {
-	// defer func() {
-	// 	x := recover()
-	// 	if x != nil {
-	// 		log.Panic(x)
-	// 	}
-	// }()
-	// fs, err := os.Open(ymlPath)
-	// if err != nil {
-	// 	log.Panic(91, err)
-	// }
-	// defer fs.Close()
-	// all, _ := ioutil.ReadAll(fs)
-	// var enterStyle = 0
-	// var lastChar = 0
-	// var dy = make(map[string]*DynamicRoute, 0)
-	// for k, v := range all {
-	// 	if v == 13 {
-	// 		if all[k+1] == 10 {
-	// 			enterStyle = 0 // windows
-	// 		} else {
-	// 			enterStyle = 1 // unix
-	// 		}
-	// 		break
-	// 	}
-	// }
-	// var path = ""
-	// for k, v := range all {
-	// 	if v == 13 {
-	// 		if enterStyle == 0 {
-	// 			for j, c := range all[lastChar:k] {
-	// 				if c == 58 {
-	// 					if path == "" {
-	// 						path = string(all[lastChar:k][j+2:])
-	// 						break
-	// 					} else if path != "" {
-	// 						dy[path] = &DynamicRoute{
-	// 							path,
-	// 							string(all[lastChar:k][j+2:]),
-	// 						}
-	// 						path = ""
-	// 						break
-	// 					}
-	// 				}
-	// 			}
-	// 			lastChar = k + 2
-	// 			continue
-	// 		} else {
-	// 			lastChar = k
-	// 		}
-	// 	}
-	// }
-	// dy[path] = &DynamicRoute{
-	// 	path,
-	// 	string(all[lastChar+8 : len(all)]),
-	// }
-	// for _, v := range dy {
-	// 	mux.Get(v.Path, func(writer http.ResponseWriter, request *http.Request, r *Core) {
-	// 		writeStaticFile(dy[request.URL.Path].View, []string{"", "html"}, writer)
-	// 	})
-	// }
 	f, err := os.Open(ymlPath)
 	if err != nil {
 		panic(err)
@@ -286,69 +287,37 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	//
 	// }
 	for _, v := range dy {
-		fmt.Println(v)
-
+		mux.Get(v.Path, mux.HttpProxy(v))
 	}
 }
-func filter(s []byte) string {
-	sr := make([]byte, 0)
-	// 清除前面的空格符号
-	for k, v := range s {
-		if v != ' ' {
-			s = s[k:]
-			break
+func (mux *Trie) HttpProxy(dr *DynamicRoute) func(w http.ResponseWriter, r *http.Request, core *Core) {
+	switch dr.Type {
+	case "proxy":
+		return func(w http.ResponseWriter, r *http.Request, core *Core) {
+			client := &http.Client{}
+			req, err := http.NewRequest(dr.Method, dr.ProxyPass, r.Body)
+			if err != nil {
+				log.Panicln(err)
+			}
+			resp, err := client.Do(req)
+			if err != nil {
+				return
+			}
+			defer resp.Body.Close()
+			w.Header().Set("Content-Type", resp.Header.Get("Content-Type"))
+			io.Copy(w, resp.Body)
+		}
+	case "static":
+		return func(w http.ResponseWriter, r *http.Request, core *Core) {
+			tp, err := template.ParseFiles(includeTemp(dr.View, Layout)...)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+			tp.Execute(w, nil)
 		}
 	}
-	// 清除后面的换行 符号
-	for _, v := range s {
-		if v != '\n' && v != '\r' {
-			sr = append(sr, v)
-		}
-	}
-	return string(sr)
-}
-func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Head(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodHead, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Post(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodPost, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Put(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodPut, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodPatch, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodDelete, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodConnect, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodTrace, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) Options(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodOptions, path, handlerFunc, nil, middleName)
-}
-func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) error) {
-	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
-		Name: name,
-		Fn:   fn,
-	})
-}
-func (mux *Trie) Middleware(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
-	fmt.Println("middle =>", name)
-	mux.Middle(name, fn)
-}
-func (mux *Trie) Group(path string, fn func(groups *Groups)) {
-	g := new(Groups)
-	g.Tree = mux
-	g.Path = path
-	fn(g)
+	return nil
 }
 
 type Core struct {
