@@ -30,7 +30,7 @@ type Son struct {
 	fuzzyPosition string
 	handlerFunc   HandlerFunc
 	handler       http.Handler
-	next          *Son
+	next          map[string]*Son
 }
 type GlobalFunc struct {
 	Name string
@@ -46,6 +46,7 @@ func NewSon(method string, path string, handlerFunc HandlerFunc, handler http.Ha
 		handler:     handler,
 		method:      method,
 		child:       make(map[string]*Son),
+		next:        make(map[string]*Son),
 	}
 }
 func NewRouter(sessionSetting ...string) *Trie {
@@ -73,64 +74,6 @@ func NewRouter(sessionSetting ...string) *Trie {
 	}
 }
 
-func (mux *Trie) Handler(path string, handler http.Handler, middleName ...string) {
-	son := mux.root
-	pattern := strings.TrimPrefix(path, "/")
-	res := strings.Split(pattern, mux.pattern)
-	tron := mux.root
-	if son.key != path {
-		for _, key := range res {
-			if son.child[key] == nil {
-				son.child[key] = &Son{
-					key:         "",
-					path:        "",
-					deep:        0,
-					child:       make(map[string]*Son),
-					terminal:    false,
-					middle:      "",
-					handlerFunc: nil,
-					handler:     handler,
-					next:        nil,
-				}
-			} else {
-				p := son.child[key].next
-				for p.next != nil {
-					p = p.next
-				}
-				p = &Son{
-					key:         "",
-					path:        "",
-					deep:        0,
-					child:       make(map[string]*Son),
-					terminal:    false,
-					middle:      "",
-					handlerFunc: nil,
-					handler:     handler,
-					next:        nil,
-				}
-				fuzP, fuzB := fPostion(key)
-				son.fuzzyPosition = fuzP
-				son.fuzzy = fuzB
-				son = son.child[key]
-				tron = son
-			}
-			fuzP, fuzB := fPostion(key)
-			son.fuzzyPosition = fuzP
-			son.fuzzy = fuzB
-			son = son.child[key]
-			tron = son
-		}
-	}
-	tron.handler = handler
-	tron.key = path
-	tron.terminal = true
-	fuzP, fuzB := fPostion(path)
-	tron.fuzzyPosition = fuzP
-	tron.fuzzy = fuzB
-	if len(middleName) > 0 {
-		tron.middle = middleName[0]
-	}
-}
 func (mux *Trie) insert(method string, path string, handlerFunc HandlerFunc, handler http.Handler, name []string) {
 	switch method {
 	case http.MethodGet:
@@ -150,37 +93,27 @@ func (mux *Trie) insert(method string, path string, handlerFunc HandlerFunc, han
 	case http.MethodTrace:
 		fmt.Println(method, "\t", path)
 	}
-	son := mux.root
 	pattern := strings.TrimPrefix(path, "/")
 	res := strings.Split(pattern, mux.pattern)
-	// res = res[:len(res)-1]
 	tson := mux.root
-	if son.key != path {
+	if tson.key != path {
 		for _, key := range res {
 			_, fuzB := fPostion(key)
 			if fuzB { // 具有模糊查找功能 直接把key变成 *
 				key = "*"
 			}
-			if son.child[key] == nil {
-				son.child[key] = NewSon(method, "", nil, nil, 0)
-				son = son.child[key]
-				tson = son
+			if tson.child[key] == nil {
+				tson.child[key] = NewSon(method, key, nil, nil, 0)
+				tson = tson.child[key]
 			} else {
-				if son.child[key].method != method {
-					p := son.child[key].next
-					for p != nil {
-						son.child[key].next = p.next
-					}
-					son.child[key].next = NewSon(method, "", handlerFunc, handler, 0)
-					if len(name) > 0 {
-						son.child[key].next.middle = name[0]
-					}
-				} else {
-					son = son.child[key]
-					tson = son
-				}
+				// 这里又两种情况 可能key出现重复 需要放在next中
+				tson = tson.child[key]
 			}
 		}
+	}
+	if tson.key == res[len(res)-1] && tson.method != method {
+		tson.next[method] = NewSon(method, res[len(res)-1], nil, nil, 0)
+		tson = tson.next[method]
 	}
 	fuzS, fuzB := fPostion(path)
 	if fuzB { // 具有模糊查找功能 直接把key变成 *
@@ -233,13 +166,7 @@ func (mux *Trie) Find(key string, methods string) (string, HandlerFunc, http.Han
 	if son.method == methods {
 		goto end
 	}
-	for son.next != nil {
-		if son.next.method == methods {
-			break
-		}
-		son.next = son.next.next
-	}
-	son = son.next
+	son = son.next[methods]
 	goto end
 end:
 	return son.method, son.handlerFunc, son.handler, son.middle, param, true
