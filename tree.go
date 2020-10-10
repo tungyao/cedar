@@ -144,6 +144,7 @@ func (mux *Trie) Find(key string, methods string) (string, HandlerFunc, http.Han
 			}
 			if son.child["*"] != nil {
 				param = getParam(paths, pattern)
+				fmt.Println(paths, pattern)
 				son = son.child["*"]
 				continue
 			}
@@ -198,14 +199,14 @@ func getParam(position, path string) string {
 	if len(position) > len(path)-1 {
 		return ""
 	}
-	kx := 0
-	for k, v := range path[len(position):] {
-		if v == '/' {
-			kx = k
-			break
-		}
-	}
-	return path[len(position):][:kx]
+	//kx := 0
+	//for k, v := range path[len(position):] {
+	//	if v == '/' {
+	//		kx = k
+	//		break
+	//	}
+	//}
+	return path[len(position):]
 }
 func fPostion(path string) (string, bool) {
 	for k, v := range path {
