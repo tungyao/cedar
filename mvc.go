@@ -183,28 +183,28 @@ func (mux *Trie) Get(path string, handlerFunc HandlerFunc, middleName ...string)
 	mux.insert(http.MethodGet, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Head(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodHead, path+"/HEAD", handlerFunc, nil, middleName)
+	mux.insert(http.MethodHead, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Post(path string, handlerFunc HandlerFunc, middleName ...string) {
 	mux.insert(http.MethodPost, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Put(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodPut, path+"/PUT", handlerFunc, nil, middleName)
+	mux.insert(http.MethodPut, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Patch(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodPatch, path+"/PATCH", handlerFunc, nil, middleName)
+	mux.insert(http.MethodPatch, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Delete(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodDelete, path+"/DELETE", handlerFunc, nil, middleName)
+	mux.insert(http.MethodDelete, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Connect(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodConnect, path+"/CONNECT", handlerFunc, nil, middleName)
+	mux.insert(http.MethodConnect, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Trace(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodTrace, path+"/TRACE", handlerFunc, nil, middleName)
+	mux.insert(http.MethodTrace, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) Options(path string, handlerFunc HandlerFunc, middleName ...string) {
-	mux.insert(http.MethodOptions, path+"/OPTIONS", handlerFunc, nil, middleName)
+	mux.insert(http.MethodOptions, path, handlerFunc, nil, middleName)
 }
 func (mux *Trie) GlobalFunc(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) error) {
 	mux.globalFunc = append(mux.globalFunc, &GlobalFunc{
