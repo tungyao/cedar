@@ -117,6 +117,7 @@ func TestSession(t *testing.T) {
 
 func TestDynamic(t *testing.T) {
 	r := cedar.NewRouter()
+	r.SetDebug()
 	r.Dynamic("./dynamic.yml")
 	http.ListenAndServe(":80", r)
 }

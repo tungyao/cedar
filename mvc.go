@@ -287,7 +287,25 @@ func (mux *Trie) Dynamic(ymlPath string) {
 	//
 	// }
 	for _, v := range dy {
-		mux.Get(v.Path, mux.HttpProxy(v))
+		go func(v *DynamicRoute) {
+			switch strings.ToUpper(v.Method) {
+			case "GET":
+				mux.Get(v.Path, mux.HttpProxy(v))
+			case "POST":
+				mux.Post(v.Path, mux.HttpProxy(v))
+			case "PUT":
+				mux.Put(v.Path, mux.HttpProxy(v))
+			case "DELETE":
+				mux.Delete(v.Path, mux.HttpProxy(v))
+			case "CONNECT":
+				mux.Connect(v.Path, mux.HttpProxy(v))
+			case "OPTIONS":
+				mux.Options(v.Path, mux.HttpProxy(v))
+			case "TRACE":
+				mux.Trace(v.Path, mux.HttpProxy(v))
+			}
+		}(v)
+
 	}
 }
 func (mux *Trie) HttpProxy(dr *DynamicRoute) func(w http.ResponseWriter, r *http.Request, core *Core) {
