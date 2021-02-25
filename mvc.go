@@ -2,6 +2,7 @@ package cedar
 
 import (
 	"bufio"
+	"context"
 	json2 "encoding/json"
 	"fmt"
 	"html/template"
@@ -538,6 +539,7 @@ func (j *json) Error(err string) {
 
 // 自动注册路由
 type AutoRegister struct {
+	ctx context.Context
 }
 
 func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
