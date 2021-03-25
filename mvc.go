@@ -394,7 +394,20 @@ func (co *Core) View() *view {
 		w:    co.writer,
 	}
 }
-func (co *Core) Json() *json {
+
+// data
+// http status
+// map or struct
+func (co *Core) Json(data ...interface{}) *json {
+	if len(data) > 1 {
+		co.writer.WriteHeader(data[0].(int))
+		b, err := json2.Marshal(data)
+		if err != nil {
+			thownErr(err, co.writer)
+			return nil
+		}
+		co.writer.Write(b)
+	}
 	return &json{
 		w: co.writer,
 	}
