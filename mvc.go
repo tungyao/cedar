@@ -3,8 +3,8 @@ package cedar
 import (
 	"bufio"
 	"context"
-	json2 "encoding/json"
 	"fmt"
+	json2 "github.com/json-iterator/go"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -32,6 +32,10 @@ type DynamicRoute struct {
 	Type      string `dynamic:"type"`
 	ProxyPass string `dynamic:"proxy_pass"`
 }
+
+const (
+	TypeJson = "application/json"
+)
 
 func writeStaticFile(path string, filename []string, w http.ResponseWriter) {
 	if pusher, ok := w.(http.Pusher); ok {
@@ -92,7 +96,9 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			})
 			name = string(x)
 		} else {
-			name = c.Value
+			if c != nil {
+				name = c.Value
+			}
 		}
 	}
 	co := &Core{
@@ -114,7 +120,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	for _, v := range autobefore {
+	for _, v := range autosome {
 		v.MethodByName("AutoBefore").Call([]reflect.Value{reflect.ValueOf(w),
 			reflect.ValueOf(r),
 			reflect.ValueOf(co)})
@@ -369,11 +375,11 @@ func (v *view) Render(view_page ...string) {
 	if len(view_page) > 0 {
 		tp, err := template.ParseFiles(includeTemp(OUT+"/"+view_page[0]+".html", Layout)...)
 		if err != nil {
-			thownErr(err, v.w)
+			thrownErr(err, v.w)
 			return
 		}
 		err = tp.Execute(v.w, v.data)
-		thownErr(err, v.w)
+		thrownErr(err, v.w)
 		return
 	}
 	pc := make([]uintptr, 1)
@@ -381,11 +387,11 @@ func (v *view) Render(view_page ...string) {
 	s := getTemplatePath(runtime.FuncForPC(pc[0]).Name())
 	tp, err := template.ParseFiles(includeTemp(s, Layout)...)
 	if err != nil {
-		thownErr(err, v.w)
+		thrownErr(err, v.w)
 		return
 	}
 	err = tp.Execute(v.w, v.data)
-	thownErr(err, v.w)
+	thrownErr(err, v.w)
 }
 
 func (co *Core) View() *view {
@@ -396,16 +402,18 @@ func (co *Core) View() *view {
 }
 
 // data
-// http status
-// map or struct
+// http status 1
+// map or struct 2
+// header 3
 func (co *Core) Json(data ...interface{}) *json {
 	if len(data) > 1 {
 		co.writer.WriteHeader(data[0].(int))
-		b, err := json2.Marshal(data)
+		b, err := json2.Marshal(data[1])
 		if err != nil {
-			thownErr(err, co.writer)
+			thrownErr(err, co.writer)
 			return nil
 		}
+		co.writer.Header().Set("Content-Type", TypeJson)
 		co.writer.Write(b)
 	}
 	return &json{
@@ -459,7 +467,7 @@ func byt(s string) []byte {
 func str(b []byte) string {
 	return *(*string)(unsafe.Pointer(&b))
 }
-func thownErr(err error, w http.ResponseWriter) {
+func thrownErr(err error, w http.ResponseWriter) {
 	if err == nil {
 		return
 	}
@@ -538,7 +546,7 @@ func includeTemp(s string, ss []string) []string {
 func (j *json) Success(data interface{}) {
 	b, err := json2.Marshal(data)
 	if err != nil {
-		thownErr(err, j.w)
+		thrownErr(err, j.w)
 		return
 	}
 	j.w.Header().Set("content-type", "application/json")
@@ -555,7 +563,7 @@ type AutoRegister struct {
 	ctx context.Context
 }
 
-func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegister {
+func (mux *Trie) AutoRegister(auto interface{}) *AutoRegister {
 	spPkg := strings.Split(reflect.TypeOf(auto).Elem().PkgPath(), "/")
 	pkgName := spPkg[len(spPkg)-1] + "/"
 	for i := 0; i < reflect.ValueOf(auto).NumMethod(); i++ {
@@ -614,8 +622,8 @@ func (mux *Trie) AutoRegister(auto interface{}, middleware ...string) *AutoRegis
 }
 
 var (
-	pluginArr  = make(map[string]reflect.Value)
-	autobefore = make([]reflect.Value, 0)
+	pluginArr = make(map[string]reflect.Value)
+	autosome  = make([]reflect.Value, 0)
 )
 
 // 要求有自动注册插件到Core中去
@@ -633,7 +641,7 @@ func (mux *Trie) Plugin(pluginStruct interface{}) {
 	st := reflect.TypeOf(pluginStruct)
 	rv := reflect.ValueOf(pluginStruct)
 	x := rv.MethodByName("AutoStart").Call(nil)
-	autobefore = append(autobefore, x[0])
+	autosome = append(autosome, x[0])
 	pluginArr[st.Elem().Name()] = rv
 
 }
@@ -641,9 +649,7 @@ func (mux *Trie) Plugin(pluginStruct interface{}) {
 // func (pl *Plugin)AutoStart() interface{}  {
 // 	return nil
 // }
-func (pl *Plugin) AutoBefore(w http.ResponseWriter, r *http.Request, co *Core) {
-
-}
+func (pl *Plugin) AutoBefore(http.ResponseWriter, *http.Request, *Core) {}
 func (pl plugin) Call(funcName string, args ...interface{}) []reflect.Value {
 	arr := make([]reflect.Value, len(args))
 	if len(args) != 0 {

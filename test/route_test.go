@@ -7,8 +7,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"../../cedar"
-	"./router/v1"
+	"github.com/tungyao/cedar"
 )
 
 func TestNormalGlobal(t *testing.T) {
@@ -89,7 +88,6 @@ func byt(s string) []byte {
 func TestAuto(t *testing.T) {
 	r := cedar.NewRouter("localhost", "localhost")
 	r.SetDebug()
-	r.AutoRegister(&v1.Auto{})
 	http.ListenAndServe(":8000", r)
 }
 
