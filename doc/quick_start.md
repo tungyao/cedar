@@ -29,3 +29,6 @@ r.Get(path string, handlerFunc HandlerFunc, middleName ...string)
 ```
 
 - 中间件加载方式
+```go
+r.MiddleWare()
+```
