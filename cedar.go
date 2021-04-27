@@ -108,7 +108,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Session: Session{
 			Cookie: name,
 		},
-		encryptFunc: mux.encryptionFunc,
+		EncryptFunc: mux.encryptionFunc,
 	}
 	go func() {
 		for k, v := range mux.globalFunc {
@@ -352,7 +352,7 @@ type Core struct {
 	resp        *http.Request
 	PL          *Plugin
 	Session     Session
-	encryptFunc Encryption
+	EncryptFunc Encryption
 }
 
 // add new component view render
@@ -406,7 +406,28 @@ func (co *Core) View() *view {
 	}
 }
 
-// data
+// Decode 对加密上来的东西进行解密
+func (co *Core) Decode(method int, scan interface{}) []byte {
+	switch method {
+	case DECODE_JSON:
+		b, err := io.ReadAll(co.resp.Body)
+		co.resp.Body.Close()
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+		err = json2.Unmarshal(co.EncryptFunc.Decode(b, co.resp.Header.Get("tyrant")), scan)
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
+	case DECODE_QUERY:
+		return co.EncryptFunc.Decode(byt(co.resp.URL.Query().Get(scan.(string))), co.resp.Header.Get("tyrant"))
+	}
+	return nil
+}
+
+// Json data
 // http status 1
 // map or struct 2
 // header 3
@@ -421,15 +442,15 @@ func (co *Core) Json(data ...interface{}) *json {
 		co.writer.Header().Set("Content-Type", TypeJson)
 		co.writer.Write(func() []byte {
 			tyrant := co.resp.Header.Get("tyrant")
-			if co.encryptFunc != nil && tyrant != "" && tyrant != "false" {
-				return co.encryptFunc.Encode(b, tyrant)
+			if co.EncryptFunc != nil && tyrant != "" && tyrant != "false" {
+				return co.EncryptFunc.Encode(b, tyrant)
 			}
 			return b
 		}())
 	}
 	return &json{
 		w:           co.writer,
-		encryptFunc: co.encryptFunc,
+		encryptFunc: co.EncryptFunc,
 		tyrant:      co.resp.Header.Get("tyrant"),
 	}
 }

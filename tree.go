@@ -10,7 +10,7 @@ import (
 
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Core)
 type Encryption interface {
-	Decode(src []byte, key string) []byte
+	Decode(src []byte, key ...string) []byte
 	Encode(src []byte, key string) []byte
 }
 type Trie struct {
@@ -224,3 +224,8 @@ func fPostion(path string) (string, bool) {
 	}
 	return path, false
 }
+
+const (
+	DECODE_JSON = iota
+	DECODE_QUERY
+)

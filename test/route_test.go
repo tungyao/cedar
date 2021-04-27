@@ -3,9 +3,13 @@ package test
 import (
 	"encoding/base64"
 	"fmt"
+	"log"
+	"math"
 	"net/http"
 	"reflect"
+	"strings"
 	"testing"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/tungyao/cedar"
@@ -17,8 +21,43 @@ type en struct {
 func (e en) Encode(src []byte, key string) []byte {
 	return []byte(base64.RawURLEncoding.EncodeToString(src))
 }
-func (e en) Decode(src []byte, key string) []byte {
-	return nil
+func (e en) Decode(src []byte, key ...string) []byte {
+	dsk, err := base64.StdEncoding.DecodeString(string(src))
+	if err != nil {
+		return nil
+	}
+	var (
+		b1 int32
+		b2 int32
+		b3 int32
+		d  int
+	)
+	var k = int32(len(key[0]))
+	var s = make([]rune, int(math.Floor(float64(len(dsk)/3))))
+	for i := 0; i < len(s); i++ {
+		b1 = int32(strings.IndexByte(key[0], dsk[d]))
+		d++
+		b2 = int32(strings.IndexByte(key[0], dsk[d]))
+		d++
+		b3 = int32(strings.IndexByte(key[0], dsk[d]))
+		d++
+		s[i] = b1*k*k + b2*k + b3
+	}
+	return runes2str(s)
+}
+func runes2str(s []int32) []byte {
+	var p []byte
+	for _, r := range s {
+		buf := make([]byte, 3)
+		if r > 128 {
+			_ = utf8.EncodeRune(buf, r)
+			p = append(p, buf...)
+		} else {
+			p = append(p, byte(r))
+		}
+
+	}
+	return p
 }
 func TestNormalGlobal(t *testing.T) {
 	r := cedar.NewRouter()
@@ -28,6 +67,7 @@ func TestNormalGlobal(t *testing.T) {
 	r.Get("/", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
 		// writer.Write([]byte("helloxxx"))
 		r.Json().Success(map[string]string{"a": "b"})
+		log.Println(string(r.Decode(cedar.DECODE_QUERY, "a")))
 	})
 	http.ListenAndServe(":8000", r)
 }
