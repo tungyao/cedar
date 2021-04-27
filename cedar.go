@@ -420,8 +420,9 @@ func (co *Core) Json(data ...interface{}) *json {
 		}
 		co.writer.Header().Set("Content-Type", TypeJson)
 		co.writer.Write(func() []byte {
-			if co.encryptFunc != nil {
-				return co.encryptFunc.Encode(b, co.resp.Header.Get("tyrant"))
+			tyrant := co.resp.Header.Get("tyrant")
+			if co.encryptFunc != nil && tyrant != "" && tyrant != "false" {
+				return co.encryptFunc.Encode(b, tyrant)
 			}
 			return b
 		}())
@@ -563,7 +564,7 @@ func (j *json) Success(data interface{}) {
 	}
 	j.w.Header().Set("content-type", "application/json")
 	j.w.Write(func() []byte {
-		if j.encryptFunc != nil {
+		if j.encryptFunc != nil && j.tyrant != "" && j.tyrant != "false" {
 			return j.encryptFunc.Encode(b, j.tyrant)
 		}
 		return b
