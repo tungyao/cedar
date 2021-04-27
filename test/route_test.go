@@ -1,6 +1,7 @@
 package test
 
 import (
+	"encoding/base64"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -10,18 +11,29 @@ import (
 	"github.com/tungyao/cedar"
 )
 
+type en struct {
+}
+
+func (e en) Encode(src []byte, key string) []byte {
+	return []byte(base64.RawURLEncoding.EncodeToString(src))
+}
+func (e en) Decode(src []byte, key string) []byte {
+	return nil
+}
 func TestNormalGlobal(t *testing.T) {
 	r := cedar.NewRouter()
+	r.SetDebug()
+	r.SetEncryption(en{})
+
 	r.Get("/", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-		writer.Write([]byte("helloxxx"))
-	})
-	r.Get("/kx", func(writer http.ResponseWriter, request *http.Request, r *cedar.Core) {
-		writer.Write([]byte("helloxxxkk"))
+		// writer.Write([]byte("helloxxx"))
+		r.Json().Success(map[string]string{"a": "b"})
 	})
 	http.ListenAndServe(":8000", r)
 }
 func TestGroup(t *testing.T) {
 	r := cedar.NewRouter()
+
 	r.Middleware("test", func(w http.ResponseWriter, r *http.Request, c *cedar.Core) bool {
 		http.Redirect(w, r, "/a/b/c", 302)
 		return false
@@ -113,9 +125,13 @@ func TestSession(t *testing.T) {
 	http.ListenAndServe(":8000", r)
 }
 
+func Core() {
+
+}
 func TestDynamic(t *testing.T) {
 	r := cedar.NewRouter()
 	r.SetDebug()
 	r.Dynamic("./dynamic.yml")
+
 	http.ListenAndServe(":80", r)
 }

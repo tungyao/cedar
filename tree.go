@@ -9,14 +9,18 @@ import (
 )
 
 type HandlerFunc func(http.ResponseWriter, *http.Request, *Core)
-
+type Encryption interface {
+	Decode(src []byte, key string) []byte
+	Encode(src []byte, key string) []byte
+}
 type Trie struct {
-	num        int64
-	pattern    string
-	root       *Son
-	globalFunc []*GlobalFunc
-	middle     map[string]func(w http.ResponseWriter, r *http.Request, c *Core) bool
-	sessions   *sessions
+	num            int64
+	pattern        string
+	root           *Son
+	globalFunc     []*GlobalFunc
+	middle         map[string]func(w http.ResponseWriter, r *http.Request, c *Core) bool
+	sessions       *sessions
+	encryptionFunc Encryption
 }
 type Son struct {
 	key           string // /a
@@ -175,6 +179,10 @@ end:
 func (mux *Trie) Middle(name string, fn func(w http.ResponseWriter, r *http.Request, co *Core) bool) {
 	mux.middle[name] = fn
 }
+
+func (mux *Trie) SetEncryption(e Encryption) {
+	mux.encryptionFunc = e
+}
 func SplitString(str []byte, p []byte) []string {
 	group := make([]string, 0)
 	for i := 0; i < len(str); i++ {
@@ -199,13 +207,13 @@ func getParam(position, path string) string {
 	if len(position) > len(path)-1 {
 		return ""
 	}
-	//kx := 0
-	//for k, v := range path[len(position):] {
+	// kx := 0
+	// for k, v := range path[len(position):] {
 	//	if v == '/' {
 	//		kx = k
 	//		break
 	//	}
-	//}
+	// }
 	return path[len(position):]
 }
 func fPostion(path string) (string, bool) {

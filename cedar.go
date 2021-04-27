@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"fmt"
-	json2 "github.com/json-iterator/go"
 	"html/template"
 	"io"
 	"io/ioutil"
@@ -16,6 +15,8 @@ import (
 	"strings"
 	"time"
 	"unsafe"
+
+	json2 "github.com/json-iterator/go"
 )
 
 var FileType = map[string]string{"html": "text/html", "json": "application/json", "css": "text/css", "txt": "text/plain", "zip": "application/x-zip-compressed", "png": "image/png", "jpg": "image/jpeg"}
@@ -107,6 +108,7 @@ func (mux *Trie) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Session: Session{
 			Cookie: name,
 		},
+		encryptFunc: mux.encryptionFunc,
 	}
 	go func() {
 		for k, v := range mux.globalFunc {
@@ -346,10 +348,11 @@ func (mux *Trie) HttpProxy(dr *DynamicRoute) func(w http.ResponseWriter, r *http
 }
 
 type Core struct {
-	writer  http.ResponseWriter
-	resp    *http.Request
-	PL      *Plugin
-	Session Session
+	writer      http.ResponseWriter
+	resp        *http.Request
+	PL          *Plugin
+	Session     Session
+	encryptFunc Encryption
 }
 
 // add new component view render
@@ -364,7 +367,9 @@ type view struct {
 	w    http.ResponseWriter
 }
 type json struct {
-	w http.ResponseWriter
+	w           http.ResponseWriter
+	encryptFunc Encryption
+	tyrant      string
 }
 
 func (v *view) Assign(name string, value interface{}) *view {
@@ -414,10 +419,17 @@ func (co *Core) Json(data ...interface{}) *json {
 			return nil
 		}
 		co.writer.Header().Set("Content-Type", TypeJson)
-		co.writer.Write(b)
+		co.writer.Write(func() []byte {
+			if co.encryptFunc != nil {
+				return co.encryptFunc.Encode(b, co.resp.Header.Get("tyrant"))
+			}
+			return b
+		}())
 	}
 	return &json{
-		w: co.writer,
+		w:           co.writer,
+		encryptFunc: co.encryptFunc,
+		tyrant:      co.resp.Header.Get("tyrant"),
 	}
 }
 func (co *Core) Byte(s string) []byte {
@@ -550,7 +562,12 @@ func (j *json) Success(data interface{}) {
 		return
 	}
 	j.w.Header().Set("content-type", "application/json")
-	j.w.Write(b)
+	j.w.Write(func() []byte {
+		if j.encryptFunc != nil {
+			return j.encryptFunc.Encode(b, j.tyrant)
+		}
+		return b
+	}())
 }
 func (j *json) Error(err string) {
 	j.w.WriteHeader(403)
