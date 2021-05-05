@@ -29,10 +29,11 @@ type method struct {
 // Next 下一段路由
 // Path 匹配的路由
 type router struct {
-	Next       *router
+	Next       map[string]*router
 	Method     method
 	Path       string
 	IsMatching bool
+	Key        string
 	URLData    map[string]string
 }
 

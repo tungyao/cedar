@@ -1,13 +1,15 @@
 package ultimate_cedar
 
 import (
+	"bytes"
+	"fmt"
 	"log"
 	"net/http"
 	"strings"
 )
 
 type tree struct {
-	Router *router
+	Router map[string]*router
 	Map    map[string]Handler
 }
 
@@ -47,35 +49,56 @@ func (t *tree) append(mth, path string, handler Handler) {
 	}
 	// 要处理两种状态 带 : 的
 	rut := t.Router
-	for _, s := range strings.Split(path, "/") {
-		if s == "" {
-			continue
-		}
-		var rx *router
+	spt := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	fmt.Println("spt=>", spt)
+	var sp string
+	for _, s := range spt {
+		var rx router
 		// 这就是需要进行匹配的
 		if s[0] == ':' {
-			rx = &router{
+			rx = router{
 				Next:       nil,
 				Method:     setMethod(mth, handler),
-				Path:       s,
+				Path:       path,
 				IsMatching: true,
+				Key:        s,
 				URLData:    make(map[string]string),
 			}
 			rx.URLData[s[1:]] = ""
 		} else {
-			rx = &router{
+			rx = router{
 				Next:       nil,
 				Method:     setMethod(mth, handler),
-				Path:       s,
+				Path:       path,
+				Key:        s,
 				IsMatching: false,
 			}
 		}
-		log.Println(rut == nil, rut)
-		if rut == nil {
-			rut = rx
+		if t.Router == nil {
+			t.Router = make(map[string]*router)
+			t.Router[s] = new(router)
+			t.Router[s].Next = rx.Next
+			t.Router[s].Path = rx.Path
+			t.Router[s].URLData = rx.URLData
+			t.Router[s].Method = rx.Method
+			t.Router[s].Key = rx.Key
+			t.Router[s].IsMatching = rx.IsMatching
+			rut = t.Router
 		} else {
-			rut = rut.Next
+			// 找到上部分
+			fmt.Println("----", rut, s, sp)
+			if rut[sp].Next == nil {
+				rut[sp].Next = make(map[string]*router)
+				rut[sp].Next[s] = new(router)
+			}
+			rut[sp].Next[s].URLData = rx.URLData
+			rut[sp].Next[s].Path = rx.Path
+			rut[sp].Next[s].Method = rx.Method
+			rut[sp].Next[s].Key = rx.Key
+			rut[sp].Next[s].IsMatching = rx.IsMatching
+			rut = rut[sp].Next
 		}
+		sp = s
 
 	}
 	log.Println(rut)
@@ -94,7 +117,12 @@ func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler := t.find(r.URL.Path, r.Method)
 	if handler == nil {
 		w.WriteHeader(404)
+		w.Header().Set("content-type", "application/json")
+		_, _ = w.Write(bytes.NewBufferString(`{"x":404,"msg":"not fount"}`).Bytes())
 		return
+	}
+	for t.Router != nil {
+
 	}
 	handler(w, r)
 }
