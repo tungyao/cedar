@@ -2,8 +2,6 @@ package ultimate_cedar
 
 import (
 	"bytes"
-	"fmt"
-	"log"
 	"net/http"
 	"strings"
 )
@@ -13,6 +11,31 @@ type tree struct {
 	Map    map[string]Handler
 }
 
+func exec(router2 *router, w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case "GET":
+		router2.Method.GET(w, r)
+		break
+	case "POST":
+		router2.Method.POST(w, r)
+		break
+	case "DELETE":
+		router2.Method.DELETE(w, r)
+		break
+	case "HEAD":
+		router2.Method.HEAD(w, r)
+		break
+	case "OPTIONS":
+		router2.Method.OPTIONS(w, r)
+		break
+	case "PUT":
+		router2.Method.PUT(w, r)
+		break
+	case "PATCH":
+		router2.Method.PATCH(w, r)
+		break
+	}
+}
 func setMethod(mth string, handler Handler) method {
 	m := method{}
 	switch mth {
@@ -50,58 +73,34 @@ func (t *tree) append(mth, path string, handler Handler) {
 	// 要处理两种状态 带 : 的
 	rut := t.Router
 	spt := strings.Split(strings.TrimPrefix(path, "/"), "/")
-	fmt.Println("spt=>", spt)
-	var sp string
 	for _, s := range spt {
 		var rx router
 		// 这就是需要进行匹配的
 		if s[0] == ':' {
 			rx = router{
-				Next:       nil,
+				Next:       make(map[string]*router),
 				Method:     setMethod(mth, handler),
 				Path:       path,
 				IsMatching: true,
-				Key:        s,
-				URLData:    make(map[string]string),
+				Key:        "*",
 			}
-			rx.URLData[s[1:]] = ""
 		} else {
 			rx = router{
-				Next:       nil,
+				Next:       make(map[string]*router),
 				Method:     setMethod(mth, handler),
 				Path:       path,
 				Key:        s,
 				IsMatching: false,
 			}
 		}
-		if t.Router == nil {
-			t.Router = make(map[string]*router)
-			t.Router[s] = new(router)
-			t.Router[s].Next = rx.Next
-			t.Router[s].Path = rx.Path
-			t.Router[s].URLData = rx.URLData
-			t.Router[s].Method = rx.Method
-			t.Router[s].Key = rx.Key
-			t.Router[s].IsMatching = rx.IsMatching
-			rut = t.Router
+		// 这是第一次加载
+		if _, ok := rut[s]; ok {
+			rut = t.Router[rx.Key].Next
 		} else {
-			// 找到上部分
-			fmt.Println("----", rut, s, sp)
-			if rut[sp].Next == nil {
-				rut[sp].Next = make(map[string]*router)
-				rut[sp].Next[s] = new(router)
-			}
-			rut[sp].Next[s].URLData = rx.URLData
-			rut[sp].Next[s].Path = rx.Path
-			rut[sp].Next[s].Method = rx.Method
-			rut[sp].Next[s].Key = rx.Key
-			rut[sp].Next[s].IsMatching = rx.IsMatching
-			rut = rut[sp].Next
+			rut[rx.Key] = &rx
+			rut = rut[rx.Key].Next
 		}
-		sp = s
-
 	}
-	log.Println(rut)
 }
 
 // 这里有个更快的算法 用hash算法
@@ -116,13 +115,35 @@ func (t *tree) find(path, method string) Handler {
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	handler := t.find(r.URL.Path, r.Method)
 	if handler == nil {
-		w.WriteHeader(404)
-		w.Header().Set("content-type", "application/json")
-		_, _ = w.Write(bytes.NewBufferString(`{"x":404,"msg":"not fount"}`).Bytes())
-		return
+		spt := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+		rut := t.Router
+		count := len(spt)
+		for k, v := range spt {
+			if rut["*"] != nil {
+				if rut["*"].IsMatching {
+					r.URL.Fragment = v
+					if k == count-1 {
+						exec(rut["*"], w, r)
+						return
+					}
+				}
+				rut = rut["*"].Next
+			} else {
+				if rut[v] == nil {
+					goto end
+				}
+				if k == len(spt)-1 {
+					exec(rut[v], w, r)
+					return
+				}
+				rut = rut[v].Next
+			}
+		}
 	}
-	for t.Router != nil {
+end:
+	w.WriteHeader(404)
+	w.Header().Set("content-type", "application/json")
+	_, _ = w.Write(bytes.NewBufferString(`{"x":404,"msg":"not fount"}`).Bytes())
+	return
 
-	}
-	handler(w, r)
 }

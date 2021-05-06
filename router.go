@@ -34,7 +34,6 @@ type router struct {
 	Path       string
 	IsMatching bool
 	Key        string
-	URLData    map[string]string
 }
 
 // split 将路由进行拆分 并加入到树中
@@ -44,7 +43,7 @@ func (r *router) split() {
 
 func NewRouter() *tree {
 	r := new(tree)
-	r.Router = nil
+	r.Router = make(map[string]*router)
 	r.Map = make(map[string]Handler)
 	return r
 

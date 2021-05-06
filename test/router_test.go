@@ -2,6 +2,7 @@ package test
 
 import (
 	"fmt"
+	"log"
 	"net/http"
 	"testing"
 
@@ -13,10 +14,11 @@ func TestRouter(t *testing.T) {
 	r.Get("ab/abc", func(w http.ResponseWriter, r *http.Request) {
 		fmt.Fprintln(w, "hello world")
 	})
-	r.Get("ab/abc/:id", func(writer http.ResponseWriter, request *http.Request) {
-		fmt.Fprintln(writer, request.URL.Query().Get("id"))
+	r.Get("ab/:id/abc", func(writer http.ResponseWriter, request *http.Request) {
+		log.Println(request.URL.Fragment)
+		fmt.Fprintln(writer, request.URL.Fragment)
 	})
-	r.Get("ccc", func(writer http.ResponseWriter, request *http.Request) {
+	r.Get("/ccc", func(writer http.ResponseWriter, request *http.Request) {
 
 	})
 	r.Get("aaa/bbb/:id", func(writer http.ResponseWriter, request *http.Request) {
