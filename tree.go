@@ -163,7 +163,14 @@ func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			ResponseWriter: w,
 			Json:           new(Json),
 		}
-		handler(wx, r)
+		e := new(en)
+		e.r = r
+		rq := Request{r, e}
+		wx.writer = w
+		wx.header = make(map[string]string)
+		wx.header["content-type"] = "application/json"
+		wx.status = 200
+		handler(wx, rq)
 		return
 	}
 	w.WriteHeader(404)

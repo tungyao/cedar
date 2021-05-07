@@ -1,8 +1,16 @@
 package ultimate_cedar
 
 import (
+	"bytes"
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"io"
+	"log"
+	"math"
 	"net/http"
 	"strings"
+	"unicode/utf8"
 )
 
 // 在想能不能借助数组来存放路由
@@ -12,12 +20,121 @@ import (
 // 只需要做到这个三种匹配就能完成绝大部分的路由匹配
 
 // Handler 对原来的方法进行重写
-type Handler func(ResponseWriter, *http.Request)
+type Handler func(ResponseWriter, Request)
 type ResponseWriter struct {
 	http.ResponseWriter
 	*Json
 }
-type Json struct{}
+type Request struct {
+	*http.Request
+	*en
+}
+
+type en struct {
+	r *http.Request
+}
+
+func (e *en) Decode(any interface{}) error {
+	if key := e.r.Header.Get("tyrant"); key != "" {
+		b, err := io.ReadAll(e.r.Body)
+		if err != nil {
+			return err
+		}
+		dsk, err := base64.StdEncoding.DecodeString(string(b))
+		if err != nil {
+			return err
+		}
+		var (
+			b1 int32
+			b2 int32
+			b3 int32
+			d  int
+		)
+		var k = int32(len(key))
+		var s = make([]rune, int(math.Floor(float64(len(dsk)/3))))
+		for i := 0; i < len(s); i++ {
+			b1 = int32(strings.IndexByte(key, dsk[d]))
+			d++
+			b2 = int32(strings.IndexByte(key, dsk[d]))
+			d++
+			b3 = int32(strings.IndexByte(key, dsk[d]))
+			d++
+			s[i] = b1*k*k + b2*k + b3
+		}
+		return json.Unmarshal(runes2str(s), any)
+	}
+	return errors.New("the header have no tyrant")
+}
+func runes2str(s []int32) []byte {
+	var p []byte
+	for _, r := range s {
+		buf := make([]byte, 3)
+		if r > 128 {
+			_ = utf8.EncodeRune(buf, r)
+			p = append(p, buf...)
+		} else {
+			p = append(p, byte(r))
+		}
+
+	}
+	return p
+}
+
+type Json struct {
+	writer http.ResponseWriter
+	header map[string]string
+	status int
+	data   []byte
+}
+
+func (j *Json) ContentType(contentType string) *Json {
+	j.header["content-type"] = contentType
+	return j
+}
+func (j *Json) AddHeader(name, value string) *Json {
+	j.header[name] = value
+	return j
+}
+func (j *Json) Data(any interface{}) *Json {
+	b, err := json.Marshal(any)
+	if err != nil {
+		log.Panicln(err)
+	}
+	j.data = b
+	return j
+}
+func (j *Json) Status(status int) *Json {
+	j.status = status
+	return j
+}
+func (j *Json) Send() {
+	for k, v := range j.header {
+		j.writer.Header().Add(k, v)
+	}
+	j.writer.WriteHeader(j.status)
+	_, _ = j.writer.Write(j.data)
+}
+
+func (j *Json) Decode(key string) *Json {
+	j.header["tyrant"] = key
+	var by = make([]byte, 0)
+	var (
+		b1 int32
+		b2 int32
+		b3 int32
+	)
+	var k = int32(len(key))
+	for _, v := range bytes.Runes(j.data) {
+		b1 = v % k
+		v = (v - b1) / k
+		b2 = v % k
+		v = (v - b2) / k
+		b3 = v % k
+		by = append(by, key[b3], key[b2], key[b1])
+	}
+	j.data = []byte(base64.StdEncoding.EncodeToString(by))
+	return j
+}
 
 type method struct {
 	GET     Handler
