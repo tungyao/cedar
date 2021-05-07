@@ -11,7 +11,12 @@ import (
 // 只需要做到这个三种匹配就能完成绝大部分的路由匹配
 
 // Handler 对原来的方法进行重写
-type Handler func(http.ResponseWriter, *http.Request)
+type Handler func(ResponseWriter, *http.Request)
+type ResponseWriter struct {
+	http.ResponseWriter
+	*Json
+}
+type Json struct{}
 
 type method struct {
 	GET     Handler
@@ -36,11 +41,6 @@ type router struct {
 	Key        string
 }
 
-// split 将路由进行拆分 并加入到树中
-func (r *router) split() {
-
-}
-
 func NewRouter() *tree {
 	r := new(tree)
 	r.Router = make(map[string]*router)
@@ -50,4 +50,28 @@ func NewRouter() *tree {
 }
 func (t *tree) Get(path string, handler Handler) {
 	t.append("GET", path, handler)
+}
+
+func (t *tree) POST(path string, handler Handler) {
+	t.append("POST", path, handler)
+}
+
+func (t *tree) DELETE(path string, handler Handler) {
+	t.append("DELETE", path, handler)
+}
+
+func (t *tree) HEAD(path string, handler Handler) {
+	t.append("HEAD", path, handler)
+}
+
+func (t *tree) OPTIONS(path string, handler Handler) {
+	t.append("OPTIONS", path, handler)
+}
+
+func (t *tree) PUT(path string, handler Handler) {
+	t.append("PUT", path, handler)
+}
+
+func (t *tree) PATCH(path string, handler Handler) {
+	t.append("PATCH", path, handler)
 }

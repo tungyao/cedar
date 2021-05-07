@@ -11,30 +11,24 @@ type tree struct {
 	Map    map[string]Handler
 }
 
-func exec(router2 *router, w http.ResponseWriter, r *http.Request) {
+func exec(router2 *router, r *http.Request) Handler {
 	switch r.Method {
 	case "GET":
-		router2.Method.GET(w, r)
-		break
+		return router2.Method.GET
 	case "POST":
-		router2.Method.POST(w, r)
-		break
+		return router2.Method.POST
 	case "DELETE":
-		router2.Method.DELETE(w, r)
-		break
+		return router2.Method.DELETE
 	case "HEAD":
-		router2.Method.HEAD(w, r)
-		break
+		return router2.Method.HEAD
 	case "OPTIONS":
-		router2.Method.OPTIONS(w, r)
-		break
+		return router2.Method.OPTIONS
 	case "PUT":
-		router2.Method.PUT(w, r)
-		break
+		return router2.Method.PUT
 	case "PATCH":
-		router2.Method.PATCH(w, r)
-		break
+		return router2.Method.PATCH
 	}
+	return nil
 }
 func setMethod(mth string, handler Handler) method {
 	m := method{}
@@ -104,46 +98,46 @@ func (t *tree) append(mth, path string, handler Handler) {
 }
 
 // 这里有个更快的算法 用hash算法
-func (t *tree) find(path, method string) Handler {
-	if h, ok := t.Map[method+path]; ok {
+func (t *tree) find(r *http.Request) Handler {
+	if h, ok := t.Map[r.Method+r.URL.Path]; ok {
 		return h
 	}
-
+	spt := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
+	rut := t.Router
+	count := len(spt)
+	for k, v := range spt {
+		if rut["*"] != nil {
+			if rut["*"].IsMatching {
+				r.URL.Fragment = v
+				if k == count-1 {
+					return exec(rut[v], r)
+				}
+			}
+			rut = rut["*"].Next
+		} else {
+			if rut[v] == nil {
+				return nil
+			}
+			if k == len(spt)-1 {
+				return exec(rut[v], r)
+			}
+			rut = rut[v].Next
+		}
+	}
 	// 查找不到必定需要模糊匹配
 	return nil
 }
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler := t.find(r.URL.Path, r.Method)
-	if handler == nil {
-		spt := strings.Split(strings.TrimPrefix(r.URL.Path, "/"), "/")
-		rut := t.Router
-		count := len(spt)
-		for k, v := range spt {
-			if rut["*"] != nil {
-				if rut["*"].IsMatching {
-					r.URL.Fragment = v
-					if k == count-1 {
-						exec(rut["*"], w, r)
-						return
-					}
-				}
-				rut = rut["*"].Next
-			} else {
-				if rut[v] == nil {
-					goto end
-				}
-				if k == len(spt)-1 {
-					exec(rut[v], w, r)
-					return
-				}
-				rut = rut[v].Next
-			}
+	handler := t.find(r)
+	if handler != nil {
+		wx := ResponseWriter{
+			ResponseWriter: w,
+			Json:           new(Json),
 		}
+		handler(wx, r)
+		return
 	}
-end:
 	w.WriteHeader(404)
 	w.Header().Set("content-type", "application/json")
 	_, _ = w.Write(bytes.NewBufferString(`{"x":404,"msg":"not fount"}`).Bytes())
-	return
-
 }
