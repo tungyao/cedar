@@ -3,8 +3,7 @@ package ultimate_cedar
 import (
 	"bytes"
 	"encoding/base64"
-	"encoding/json"
-	"errors"
+	json "github.com/json-iterator/go"
 	"io"
 	"log"
 	"math"
@@ -35,11 +34,12 @@ type en struct {
 }
 
 func (e *en) Decode(any interface{}) error {
+	b, err := io.ReadAll(e.r.Body)
+	defer e.r.Body.Close()
+	if err != nil {
+		return err
+	}
 	if key := e.r.Header.Get("tyrant"); key != "" {
-		b, err := io.ReadAll(e.r.Body)
-		if err != nil {
-			return err
-		}
 		dsk, err := base64.StdEncoding.DecodeString(string(b))
 		if err != nil {
 			return err
@@ -63,7 +63,7 @@ func (e *en) Decode(any interface{}) error {
 		}
 		return json.Unmarshal(runes2str(s), any)
 	}
-	return errors.New("the header have no tyrant")
+	return json.Unmarshal(b, any)
 }
 func runes2str(s []int32) []byte {
 	var p []byte
@@ -115,7 +115,7 @@ func (j *Json) Send() {
 	_, _ = j.writer.Write(j.data)
 }
 
-func (j *Json) Decode(key string) *Json {
+func (j *Json) Encode(key string) *Json {
 	j.header["tyrant"] = key
 	var by = make([]byte, 0)
 	var (

@@ -17,7 +17,7 @@ func TestRouter(t *testing.T) {
 	r.Get("ccc", func(writer uc.ResponseWriter, request uc.Request) {
 		writer.Json.ContentType("application/json").
 			AddHeader("time", "unix").
-			Data(map[string]string{"a": "b"}).Decode("123123").Send()
+			Data(map[string]string{"a": "b"}).Encode("123123").Send()
 	})
 	r.Get("aaa/bbb/:id", func(writer uc.ResponseWriter, request uc.Request) {
 		log.Println(request.URL.Fragment)
