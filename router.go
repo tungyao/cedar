@@ -2,6 +2,7 @@ package ultimate_cedar
 
 import (
 	"net/http"
+	"strings"
 )
 
 // 在想能不能借助数组来存放路由
@@ -86,44 +87,44 @@ func (t *tree) Connect(path string, handler Handler) {
 }
 
 func (gup *Groups) Get(path string, handlerFunc Handler) {
-	gup.Tree.Get(gup.Path+path, handlerFunc)
+	gup.Tree.Get(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Head(path string, handlerFunc Handler) {
-	gup.Tree.Head(gup.Path+path, handlerFunc)
+	gup.Tree.Head(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Post(path string, handlerFunc Handler) {
-	gup.Tree.Post(gup.Path+path, handlerFunc)
+	gup.Tree.Post(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Put(path string, handlerFunc Handler) {
-	gup.Tree.Put(gup.Path+path, handlerFunc)
+	gup.Tree.Put(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Patch(path string, handlerFunc Handler) {
-	gup.Tree.Patch(gup.Path+path, handlerFunc)
+	gup.Tree.Patch(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Delete(path string, handlerFunc Handler) {
-	gup.Tree.Delete(gup.Path+path, handlerFunc)
+	gup.Tree.Delete(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Connect(path string, handlerFunc Handler) {
-	gup.Tree.Connect(gup.Path+path, handlerFunc)
+	gup.Tree.Connect(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Trace(path string, handlerFunc Handler) {
-	gup.Tree.Trace(gup.Path+path, handlerFunc)
+	gup.Tree.Trace(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Options(path string, handlerFunc Handler) {
-	gup.Tree.Options(gup.Path+path, handlerFunc)
+	gup.Tree.Options(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
 func (gup *Groups) Group(path string, fn func(Groups *Groups)) {
 	g := new(Groups)
-	g.Path = gup.Path + path
+	g.Path = gup.Path + "/" + strings.TrimPrefix(path, "/")
 	g.Tree = gup.Tree
 	fn(g)
 }

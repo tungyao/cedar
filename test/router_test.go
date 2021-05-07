@@ -20,11 +20,11 @@ func TestRouter(t *testing.T) {
 	r.Get("aaa/bbb/:id", func(writer uc.ResponseWriter, request *http.Request) {
 		log.Println(request.URL.Fragment)
 	})
-	r.Group("/a", func(groups *uc.Groups) {
-		groups.Get("/b", func(writer uc.ResponseWriter, request *http.Request) {
+	r.Group("a", func(groups *uc.Groups) {
+		groups.Get("b", func(writer uc.ResponseWriter, request *http.Request) {
 			writer.Write([]byte("get"))
 		})
-		groups.Patch("/b", func(writer uc.ResponseWriter, request *http.Request) {
+		groups.Patch("b", func(writer uc.ResponseWriter, request *http.Request) {
 			writer.Write([]byte("trace"))
 		})
 	})
