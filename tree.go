@@ -2,6 +2,7 @@ package ultimate_cedar
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"strings"
 )
@@ -9,6 +10,10 @@ import (
 type tree struct {
 	Router map[string]*router
 	Map    map[string]Handler
+}
+type Groups struct {
+	Tree *tree
+	Path string
 }
 
 func exec(router2 *router, r *http.Request) Handler {
@@ -27,6 +32,8 @@ func exec(router2 *router, r *http.Request) Handler {
 		return router2.Method.PUT
 	case "PATCH":
 		return router2.Method.PATCH
+	case "CONNECT":
+		return router2.Method.CONNECT
 	}
 	return nil
 }
@@ -54,19 +61,40 @@ func setMethod(mth string, handler Handler) method {
 	case "PATCH":
 		m.PATCH = handler
 		break
+	case "CONNECT":
+		m.CONNECT = handler
 	}
 	return m
 }
 
 // 专门用来存放
 func (t *tree) append(mth, path string, handler Handler) {
+	p := strings.TrimPrefix(path, "/")
+	switch mth {
+	case http.MethodGet:
+		fmt.Println(mth, "\t", p)
+	case http.MethodConnect:
+		fmt.Println(mth, "\t", p)
+	case http.MethodDelete:
+		fmt.Println(mth, "\t", p)
+	case http.MethodHead:
+		fmt.Println(mth, "\t", p)
+	case http.MethodOptions:
+		fmt.Println(mth, "\t", p)
+	case http.MethodPost:
+		fmt.Println(mth, "\t", p)
+	case http.MethodPut:
+		fmt.Println(mth, "\t", p)
+	case http.MethodTrace:
+		fmt.Println(mth, "\t", p)
+	}
 	if strings.Index(path, ":") == -1 {
-		t.Map[mth+path] = handler
+		t.Map[mth+p] = handler
 		return
 	}
 	// 要处理两种状态 带 : 的
 	rut := t.Router
-	spt := strings.Split(strings.TrimPrefix(path, "/"), "/")
+	spt := strings.Split(p, "/")
 	for _, s := range spt {
 		var rx router
 		// 这就是需要进行匹配的
@@ -99,6 +127,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 
 // 这里有个更快的算法 用hash算法
 func (t *tree) find(r *http.Request) Handler {
+	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/")
 	if h, ok := t.Map[r.Method+r.URL.Path]; ok {
 		return h
 	}
@@ -110,7 +139,7 @@ func (t *tree) find(r *http.Request) Handler {
 			if rut["*"].IsMatching {
 				r.URL.Fragment = v
 				if k == count-1 {
-					return exec(rut[v], r)
+					return exec(rut["*"], r)
 				}
 			}
 			rut = rut["*"].Next

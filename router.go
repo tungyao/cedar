@@ -26,6 +26,7 @@ type method struct {
 	OPTIONS Handler
 	PUT     Handler
 	PATCH   Handler
+	CONNECT Handler
 }
 
 // 每一个节点应该存在以下几个字段
@@ -52,26 +53,84 @@ func (t *tree) Get(path string, handler Handler) {
 	t.append("GET", path, handler)
 }
 
-func (t *tree) POST(path string, handler Handler) {
+func (t *tree) Post(path string, handler Handler) {
 	t.append("POST", path, handler)
 }
 
-func (t *tree) DELETE(path string, handler Handler) {
+func (t *tree) Delete(path string, handler Handler) {
 	t.append("DELETE", path, handler)
 }
 
-func (t *tree) HEAD(path string, handler Handler) {
+func (t *tree) Head(path string, handler Handler) {
 	t.append("HEAD", path, handler)
 }
 
-func (t *tree) OPTIONS(path string, handler Handler) {
+func (t *tree) Options(path string, handler Handler) {
 	t.append("OPTIONS", path, handler)
 }
 
-func (t *tree) PUT(path string, handler Handler) {
+func (t *tree) Put(path string, handler Handler) {
 	t.append("PUT", path, handler)
 }
 
-func (t *tree) PATCH(path string, handler Handler) {
+func (t *tree) Patch(path string, handler Handler) {
 	t.append("PATCH", path, handler)
+}
+
+func (t *tree) Trace(path string, handler Handler) {
+	t.append("TRACE", path, handler)
+}
+
+func (t *tree) Connect(path string, handler Handler) {
+	t.append("CONNECT", path, handler)
+}
+
+func (gup *Groups) Get(path string, handlerFunc Handler) {
+	gup.Tree.Get(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Head(path string, handlerFunc Handler) {
+	gup.Tree.Head(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Post(path string, handlerFunc Handler) {
+	gup.Tree.Post(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Put(path string, handlerFunc Handler) {
+	gup.Tree.Put(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Patch(path string, handlerFunc Handler) {
+	gup.Tree.Patch(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Delete(path string, handlerFunc Handler) {
+	gup.Tree.Delete(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Connect(path string, handlerFunc Handler) {
+	gup.Tree.Connect(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Trace(path string, handlerFunc Handler) {
+	gup.Tree.Trace(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Options(path string, handlerFunc Handler) {
+	gup.Tree.Options(gup.Path+path, handlerFunc)
+}
+
+func (gup *Groups) Group(path string, fn func(Groups *Groups)) {
+	g := new(Groups)
+	g.Path = gup.Path + path
+	g.Tree = gup.Tree
+	fn(g)
+}
+
+func (t *tree) Group(path string, fn func(groups *Groups)) {
+	g := new(Groups)
+	g.Tree = t
+	g.Path = path
+	fn(g)
 }
