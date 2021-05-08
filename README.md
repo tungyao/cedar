@@ -5,3 +5,4 @@ Improved version for cedar
 > * 一次性加解密
 > * 前缀树 + hash 储存路由
 > * json
+> * /:id/:number 匹配

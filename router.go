@@ -3,13 +3,14 @@ package ultimate_cedar
 import (
 	"bytes"
 	"encoding/base64"
-	json "github.com/json-iterator/go"
 	"io"
 	"log"
 	"math"
 	"net/http"
 	"strings"
 	"unicode/utf8"
+
+	json "github.com/json-iterator/go"
 )
 
 // 在想能不能借助数组来存放路由
@@ -27,6 +28,7 @@ type ResponseWriter struct {
 type Request struct {
 	*http.Request
 	*en
+	Data map[string]string
 }
 
 type en struct {
@@ -153,11 +155,12 @@ type method struct {
 // Next 下一段路由
 // Path 匹配的路由
 type router struct {
-	Next       map[string]*router
-	Method     method
-	Path       string
-	IsMatching bool
-	Key        string
+	Next        map[string]*router
+	Method      method
+	Path        string
+	IsMatching  bool
+	Key         string
+	MatchingKey map[string]string
 }
 
 func NewRouter() *tree {

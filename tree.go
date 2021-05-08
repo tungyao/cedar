@@ -16,7 +16,7 @@ type Groups struct {
 	Path string
 }
 
-func exec(router2 *router, r *http.Request) Handler {
+func exec(router2 *router, r Request) Handler {
 	switch r.Method {
 	case "GET":
 		return router2.Method.GET
@@ -100,12 +100,14 @@ func (t *tree) append(mth, path string, handler Handler) {
 		// 这就是需要进行匹配的
 		if s[0] == ':' {
 			rx = router{
-				Next:       make(map[string]*router),
-				Method:     setMethod(mth, handler),
-				Path:       path,
-				IsMatching: true,
-				Key:        "*",
+				Next:        make(map[string]*router),
+				Method:      setMethod(mth, handler),
+				Path:        path,
+				IsMatching:  true,
+				Key:         "*",
+				MatchingKey: make(map[string]string),
 			}
+			rx.MatchingKey[s[1:]] = ""
 		} else {
 			rx = router{
 				Next:       make(map[string]*router),
@@ -126,7 +128,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 }
 
 // 这里有个更快的算法 用hash算法
-func (t *tree) find(r *http.Request) Handler {
+func (t *tree) find(r Request) Handler {
 	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/")
 	if h, ok := t.Map[r.Method+r.URL.Path]; ok {
 		return h
@@ -137,7 +139,9 @@ func (t *tree) find(r *http.Request) Handler {
 	for k, v := range spt {
 		if rut["*"] != nil {
 			if rut["*"].IsMatching {
-				r.URL.Fragment = v
+				for k, _ := range rut["*"].MatchingKey {
+					r.Data[k] = v
+				}
 				if k == count-1 {
 					return exec(rut["*"], r)
 				}
@@ -157,15 +161,16 @@ func (t *tree) find(r *http.Request) Handler {
 	return nil
 }
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler := t.find(r)
+	e := new(en)
+	e.r = r
+	rq := Request{r, e, make(map[string]string)}
+	handler := t.find(rq)
 	if handler != nil {
 		wx := ResponseWriter{
 			ResponseWriter: w,
 			Json:           new(Json),
 		}
-		e := new(en)
-		e.r = r
-		rq := Request{r, e}
+
 		wx.writer = w
 		wx.header = make(map[string]string)
 		wx.header["content-type"] = "application/json"
