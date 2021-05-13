@@ -27,9 +27,6 @@ func TestRouter(t *testing.T) {
 			Encode("123123").
 			Send()
 	})
-	r.Get("aaa/bbb/:id", func(writer uc.ResponseWriter, request uc.Request) {
-		log.Println(request.URL.Fragment)
-	})
 	r.Group("a", func(groups *uc.Groups) {
 		groups.Get("b", func(writer uc.ResponseWriter, request uc.Request) {
 			writer.Write([]byte("get"))
