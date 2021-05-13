@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -98,6 +99,20 @@ func (j *Json) AddHeader(name, value string) *Json {
 	return j
 }
 func (j *Json) Data(any interface{}) *Json {
+	switch any.(type) {
+	case string:
+		j.data = []byte(any.(string))
+		return j
+	case []byte:
+		j.data = any.([]byte)
+		return j
+	case int:
+		j.data = []byte(strconv.Itoa(any.(int)))
+		return j
+	case int64:
+		j.data = []byte(strconv.Itoa(int(any.(int64))))
+		return j
+	}
 	b, err := json.Marshal(any)
 	if err != nil {
 		log.Panicln(err)
