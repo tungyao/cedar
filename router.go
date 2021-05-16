@@ -29,7 +29,20 @@ type ResponseWriter struct {
 type Request struct {
 	*http.Request
 	*en
-	Data map[string]string
+	Data *Data
+}
+type Data struct {
+	m map[string]string
+}
+
+func (d *Data) Get(key string) string {
+	if v, ok := d.m[key]; ok {
+		return v
+	}
+	return ""
+}
+func (d *Data) set(key, value string) {
+	d.m[key] = value
 }
 
 type en struct {

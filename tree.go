@@ -140,7 +140,7 @@ func (t *tree) find(r Request) Handler {
 		if rut["*"] != nil {
 			if rut["*"].IsMatching {
 				for k, _ := range rut["*"].MatchingKey {
-					r.Data[k] = v
+					r.Data.set(k, v)
 				}
 				if k == count-1 {
 					return exec(rut["*"], r)
@@ -163,7 +163,7 @@ func (t *tree) find(r Request) Handler {
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	e := new(en)
 	e.r = r
-	rq := Request{r, e, make(map[string]string)}
+	rq := Request{r, e, &Data{m: make(map[string]string)}}
 	handler := t.find(rq)
 	if handler != nil {
 		wx := ResponseWriter{
