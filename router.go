@@ -5,8 +5,8 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"io"
 	"log"
+	"io"
 	"math"
 	"net/http"
 	"strconv"
@@ -121,7 +121,7 @@ func (q *qu) Check(params ...string) (*pData, error) {
 		return nil, fmt.Errorf("query has been required")
 	}
 	for s, i := range q.r.URL.Query() {
-		log.Println(s, i)
+		// log.Println(s, i)
 		if !inArrayString(s, params) || len(i) == 0 {
 			return nil, fmt.Errorf("%s must be required", s)
 		}
