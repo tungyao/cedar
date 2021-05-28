@@ -2,14 +2,16 @@ package ultimate_cedar
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 )
 
 type tree struct {
-	Router map[string]*router
-	Map    map[string]Handler
+	Router   map[string]*router
+	Map      map[string]Handler
+	template [2]func(err error) []byte
 }
 type Groups struct {
 	Tree *tree
@@ -140,7 +142,7 @@ func (t *tree) find(r Request) Handler {
 		if rut["*"] != nil {
 			if rut["*"].IsMatching {
 				for k, _ := range rut["*"].MatchingKey {
-					r.Data[k] = v
+					r.Data.set(k, v)
 				}
 				if k == count-1 {
 					return exec(rut["*"], r)
@@ -161,16 +163,24 @@ func (t *tree) find(r Request) Handler {
 	return nil
 }
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	e := new(en)
-	e.r = r
-	rq := Request{r, e, make(map[string]string)}
+	ctx := context.Background()
+	e := &en{
+		r:   r,
+		ctx: ctx,
+	}
+	q := &qu{
+		r:    r,
+		ctx:  ctx,
+		data: &pData{data: make(map[string]string)},
+	}
+	rq := Request{r, e, q, &data{data: make(map[string]string)}}
 	handler := t.find(rq)
 	if handler != nil {
 		wx := ResponseWriter{
 			ResponseWriter: w,
 			Json:           new(Json),
 		}
-
+		wx.Json.t = t
 		wx.writer = w
 		wx.header = make(map[string]string)
 		wx.header["content-type"] = "application/json"
@@ -181,4 +191,8 @@ func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(404)
 	w.Header().Set("content-type", "application/json")
 	_, _ = w.Write(bytes.NewBufferString(`{"x":404,"msg":"not fount"}`).Bytes())
+}
+
+func (t *tree) ErrorTemplate(f func(err error) []byte) {
+	t.template[0] = f
 }

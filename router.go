@@ -2,7 +2,9 @@ package ultimate_cedar
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -29,11 +31,35 @@ type ResponseWriter struct {
 type Request struct {
 	*http.Request
 	*en
-	Data map[string]string
+	Query *qu
+	Data  *data
+}
+
+type pData struct {
+	data map[string]string
+}
+
+func (_d *pData) Get(key string) string {
+	return _d.data[key]
+}
+func (_d *pData) set(key, value string) {
+	_d.data[key] = value
+}
+
+type data struct {
+	data map[string]string
+}
+
+func (_d *data) Get(key string) string {
+	return _d.data[key]
+}
+func (_d *data) set(key, value string) {
+	_d.data[key] = value
 }
 
 type en struct {
-	r *http.Request
+	r   *http.Request
+	ctx context.Context
 }
 
 func (e *en) Decode(any interface{}) error {
@@ -83,11 +109,33 @@ func runes2str(s []int32) []byte {
 	return p
 }
 
+type qu struct {
+	r    *http.Request
+	ctx  context.Context
+	data *pData
+}
+
+func (q *qu) Check(params ...string) (*pData, error) {
+	v := q.r.URL.Query()
+	if len(v) == 0 && len(params) != 0 {
+		return nil, fmt.Errorf("query has been required")
+	}
+	for s, i := range q.r.URL.Query() {
+		log.Println(s, i)
+		if !inArrayString(s, params) || len(i) == 0 {
+			return nil, fmt.Errorf("%s must be required", s)
+		}
+		q.data.set(s, q.r.URL.Query().Get(s))
+	}
+	return q.data, nil
+}
+
 type Json struct {
 	writer http.ResponseWriter
 	header map[string]string
 	status int
 	data   []byte
+	t      *tree
 }
 
 func (j *Json) ContentType(contentType string) *Json {
@@ -111,6 +159,9 @@ func (j *Json) Data(any interface{}) *Json {
 		return j
 	case int64:
 		j.data = []byte(strconv.Itoa(int(any.(int64))))
+		return j
+	case error:
+		j.data = j.t.template[0](any.(error))
 		return j
 	}
 	b, err := json.Marshal(any)
