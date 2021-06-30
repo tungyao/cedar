@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"unicode/utf8"
 
 	json "github.com/json-iterator/go"
@@ -22,8 +23,8 @@ import (
 // /ab/bc/:id/nv
 // 只需要做到这个三种匹配就能完成绝大部分的路由匹配
 
-// Handler 对原来的方法进行重写
-type Handler func(ResponseWriter, Request)
+// HandlerFunc Handler 对原来的方法进行重写
+type HandlerFunc func(ResponseWriter, Request)
 type ResponseWriter struct {
 	http.ResponseWriter
 	*Json
@@ -136,6 +137,7 @@ type Json struct {
 	status int
 	data   []byte
 	t      *tree
+	sync.Once
 }
 
 func (j *Json) ContentType(contentType string) *Json {
@@ -177,9 +179,15 @@ func (j *Json) Status(status int) *Json {
 }
 func (j *Json) Send() {
 	for k, v := range j.header {
-		j.writer.Header().Add(k, v)
+		if j.writer.Header().Get(k) != "" {
+			j.writer.Header().Set(k, v)
+		} else {
+			j.writer.Header().Add(k, v)
+		}
 	}
-	j.writer.WriteHeader(j.status)
+	j.Do(func() {
+		j.writer.WriteHeader(j.status)
+	})
 	_, _ = j.writer.Write(j.data)
 }
 
@@ -205,14 +213,14 @@ func (j *Json) Encode(key string) *Json {
 }
 
 type method struct {
-	GET     Handler
-	POST    Handler
-	DELETE  Handler
-	HEAD    Handler
-	OPTIONS Handler
-	PUT     Handler
-	PATCH   Handler
-	CONNECT Handler
+	GET     HandlerFunc
+	POST    HandlerFunc
+	DELETE  HandlerFunc
+	HEAD    HandlerFunc
+	OPTIONS HandlerFunc
+	PUT     HandlerFunc
+	PATCH   HandlerFunc
+	CONNECT HandlerFunc
 }
 
 // 每一个节点应该存在以下几个字段
@@ -232,79 +240,79 @@ type router struct {
 func NewRouter() *tree {
 	r := new(tree)
 	r.Router = make(map[string]*router)
-	r.Map = make(map[string]Handler)
+	r.Map = make(map[string]HandlerFunc)
 	return r
 
 }
-func (t *tree) Get(path string, handler Handler) {
+func (t *tree) Get(path string, handler HandlerFunc) {
 	t.append("GET", path, handler)
 }
 
-func (t *tree) Post(path string, handler Handler) {
+func (t *tree) Post(path string, handler HandlerFunc) {
 	t.append("POST", path, handler)
 }
 
-func (t *tree) Delete(path string, handler Handler) {
+func (t *tree) Delete(path string, handler HandlerFunc) {
 	t.append("DELETE", path, handler)
 }
 
-func (t *tree) Head(path string, handler Handler) {
+func (t *tree) Head(path string, handler HandlerFunc) {
 	t.append("HEAD", path, handler)
 }
 
-func (t *tree) Options(path string, handler Handler) {
+func (t *tree) Options(path string, handler HandlerFunc) {
 	t.append("OPTIONS", path, handler)
 }
 
-func (t *tree) Put(path string, handler Handler) {
+func (t *tree) Put(path string, handler HandlerFunc) {
 	t.append("PUT", path, handler)
 }
 
-func (t *tree) Patch(path string, handler Handler) {
+func (t *tree) Patch(path string, handler HandlerFunc) {
 	t.append("PATCH", path, handler)
 }
 
-func (t *tree) Trace(path string, handler Handler) {
+func (t *tree) Trace(path string, handler HandlerFunc) {
 	t.append("TRACE", path, handler)
 }
 
-func (t *tree) Connect(path string, handler Handler) {
+func (t *tree) Connect(path string, handler HandlerFunc) {
 	t.append("CONNECT", path, handler)
 }
 
-func (gup *Groups) Get(path string, handlerFunc Handler) {
+func (gup *Groups) Get(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Get(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Head(path string, handlerFunc Handler) {
+func (gup *Groups) Head(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Head(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Post(path string, handlerFunc Handler) {
+func (gup *Groups) Post(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Post(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Put(path string, handlerFunc Handler) {
+func (gup *Groups) Put(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Put(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Patch(path string, handlerFunc Handler) {
+func (gup *Groups) Patch(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Patch(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Delete(path string, handlerFunc Handler) {
+func (gup *Groups) Delete(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Delete(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Connect(path string, handlerFunc Handler) {
+func (gup *Groups) Connect(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Connect(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Trace(path string, handlerFunc Handler) {
+func (gup *Groups) Trace(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Trace(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 
-func (gup *Groups) Options(path string, handlerFunc Handler) {
+func (gup *Groups) Options(path string, handlerFunc HandlerFunc) {
 	gup.Tree.Options(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
 }
 

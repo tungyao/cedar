@@ -13,18 +13,17 @@ func TestRouter(t *testing.T) {
 	r.ErrorTemplate(func(err error) []byte {
 		return []byte(err.Error() + "12312")
 	})
+
+	// test url params
 	r.Get("ab/:id/abc", func(writer uc.ResponseWriter, request uc.Request) {
 		log.Println(request.Data.Get("id"))
-		if d, err := request.Query.Check("id"); err == nil {
-			log.Println(d.Get("id"), err)
-			return
-		} else {
-			writer.Json.Status(403).Data(err).Send()
-		}
 	})
 	r.Get("m/:id/:number", func(writer uc.ResponseWriter, request uc.Request) {
-		writer.Write([]byte(request.Data.Get("id") + request.Data.Get("number")))
+		log.Println(request.Data.Get("id"))
+		log.Println(request.Data.Get("number"))
 	})
+
+	// test return chain
 	r.Get("ccc", func(writer uc.ResponseWriter, request uc.Request) {
 		writer.Json.
 			ContentType("application/json").
@@ -34,9 +33,8 @@ func TestRouter(t *testing.T) {
 			Encode("123123").
 			Send()
 	})
-	r.Get("aaa/bbb/:id", func(writer uc.ResponseWriter, request uc.Request) {
-		log.Println(request.URL.Fragment)
-	})
+
+	// test group
 	r.Group("a", func(groups *uc.Groups) {
 		groups.Get("b", func(writer uc.ResponseWriter, request uc.Request) {
 			writer.Write([]byte("get"))
@@ -45,9 +43,8 @@ func TestRouter(t *testing.T) {
 			writer.Write([]byte("trace"))
 		})
 	})
-	r.Get("test", func(writer uc.ResponseWriter, request uc.Request) {
-		writer.Data(123).Send()
-	})
+
+	// test check query params
 	r.Get("test_query_check", func(writer uc.ResponseWriter, request uc.Request) {
 		var err error
 		if d, err := request.Query.Check("id"); err == nil {
@@ -55,8 +52,22 @@ func TestRouter(t *testing.T) {
 			return
 		}
 		log.Println(err)
-
 	})
+
+	// test middleware
+	echoMiddleware := uc.MiddlewareInterceptor(func(writer uc.ResponseWriter, request uc.Request, handlerFunc uc.HandlerFunc) {
+		log.Println(request.URL.Query().Get("echo"))
+		writer.Data("runner middle").Send()
+
+		handlerFunc(writer, request)
+	})
+	middleware := uc.MiddlewareChain{
+		echoMiddleware,
+	}
+	r.Get("test_middle", middleware.Handler(func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data("hello world").Send()
+	}))
+
 	if err := http.ListenAndServe(":9000", r); err != nil {
 		log.Fatalln(err)
 	}

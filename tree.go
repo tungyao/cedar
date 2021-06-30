@@ -10,7 +10,7 @@ import (
 
 type tree struct {
 	Router   map[string]*router
-	Map      map[string]Handler
+	Map      map[string]HandlerFunc
 	template [2]func(err error) []byte
 }
 type Groups struct {
@@ -18,7 +18,7 @@ type Groups struct {
 	Path string
 }
 
-func exec(router2 *router, r Request) Handler {
+func exec(router2 *router, r Request) HandlerFunc {
 	switch r.Method {
 	case "GET":
 		return router2.Method.GET
@@ -39,7 +39,7 @@ func exec(router2 *router, r Request) Handler {
 	}
 	return nil
 }
-func setMethod(mth string, handler Handler) method {
+func setMethod(mth string, handler HandlerFunc) method {
 	m := method{}
 	switch mth {
 	case "GET":
@@ -70,7 +70,7 @@ func setMethod(mth string, handler Handler) method {
 }
 
 // 专门用来存放
-func (t *tree) append(mth, path string, handler Handler) {
+func (t *tree) append(mth, path string, handlerFunc HandlerFunc) {
 	p := strings.TrimPrefix(path, "/")
 	switch mth {
 	case http.MethodGet:
@@ -91,7 +91,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 		fmt.Println(mth, "\t", p)
 	}
 	if strings.Index(path, ":") == -1 {
-		t.Map[mth+p] = handler
+		t.Map[mth+p] = handlerFunc
 		return
 	}
 	// 要处理两种状态 带 : 的
@@ -103,7 +103,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 		if s[0] == ':' {
 			rx = router{
 				Next:        make(map[string]*router),
-				Method:      setMethod(mth, handler),
+				Method:      setMethod(mth, handlerFunc),
 				Path:        path,
 				IsMatching:  true,
 				Key:         "*",
@@ -113,7 +113,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 		} else {
 			rx = router{
 				Next:       make(map[string]*router),
-				Method:     setMethod(mth, handler),
+				Method:     setMethod(mth, handlerFunc),
 				Path:       path,
 				Key:        s,
 				IsMatching: false,
@@ -130,7 +130,7 @@ func (t *tree) append(mth, path string, handler Handler) {
 }
 
 // 这里有个更快的算法 用hash算法
-func (t *tree) find(r Request) Handler {
+func (t *tree) find(r Request) HandlerFunc {
 	r.URL.Path = strings.TrimPrefix(r.URL.Path, "/")
 	if h, ok := t.Map[r.Method+r.URL.Path]; ok {
 		return h
@@ -141,7 +141,7 @@ func (t *tree) find(r Request) Handler {
 	for k, v := range spt {
 		if rut["*"] != nil {
 			if rut["*"].IsMatching {
-				for k, _ := range rut["*"].MatchingKey {
+				for k := range rut["*"].MatchingKey {
 					r.Data.set(k, v)
 				}
 				if k == count-1 {
