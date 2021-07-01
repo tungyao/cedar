@@ -1,4 +1,4 @@
-package ultimate_cedar
+package ceder
 
 import (
 	"bytes"
@@ -14,8 +14,9 @@ type tree struct {
 	template [2]func(err error) []byte
 }
 type Groups struct {
-	Tree *tree
-	Path string
+	Tree       *tree
+	Path       string
+	Middleware []MiddlewareChain
 }
 
 func exec(router2 *router, r Request) HandlerFunc {
@@ -70,7 +71,7 @@ func setMethod(mth string, handler HandlerFunc) method {
 }
 
 // 专门用来存放
-func (t *tree) append(mth, path string, handlerFunc HandlerFunc) {
+func (t *tree) append(mth, path string, handlerFunc HandlerFunc, chain MiddlewareChain) {
 	p := strings.TrimPrefix(path, "/")
 	switch mth {
 	case http.MethodGet:
@@ -91,7 +92,7 @@ func (t *tree) append(mth, path string, handlerFunc HandlerFunc) {
 		fmt.Println(mth, "\t", p)
 	}
 	if strings.Index(path, ":") == -1 {
-		t.Map[mth+p] = handlerFunc
+		t.Map[mth+p] = chain.Handler(handlerFunc)
 		return
 	}
 	// 要处理两种状态 带 : 的
@@ -103,7 +104,7 @@ func (t *tree) append(mth, path string, handlerFunc HandlerFunc) {
 		if s[0] == ':' {
 			rx = router{
 				Next:        make(map[string]*router),
-				Method:      setMethod(mth, handlerFunc),
+				Method:      setMethod(mth, chain.Handler(handlerFunc)),
 				Path:        path,
 				IsMatching:  true,
 				Key:         "*",
@@ -113,7 +114,7 @@ func (t *tree) append(mth, path string, handlerFunc HandlerFunc) {
 		} else {
 			rx = router{
 				Next:       make(map[string]*router),
-				Method:     setMethod(mth, handlerFunc),
+				Method:     setMethod(mth, chain.Handler(handlerFunc)),
 				Path:       path,
 				Key:        s,
 				IsMatching: false,

@@ -1,4 +1,4 @@
-module github.com/tungyao/ultimate-cedar
+module github.com/tungyao/ceder
 
 go 1.16
 

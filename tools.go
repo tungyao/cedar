@@ -1,4 +1,4 @@
-package ultimate_cedar
+package ceder
 
 func inArrayString(target string, srcArr []string) bool {
 	for _, v := range srcArr {
