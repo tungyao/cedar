@@ -1,4 +1,4 @@
-package ceder
+package cedar
 
 import (
 	"bytes"
@@ -122,7 +122,6 @@ func (q *qu) Check(params ...string) (*pData, error) {
 		return nil, fmt.Errorf("query has been required")
 	}
 	for s, i := range q.r.URL.Query() {
-		// log.Println(s, i)
 		if !inArrayString(s, params) || len(i) == 0 {
 			return nil, fmt.Errorf("%s must be required", s)
 		}
@@ -252,7 +251,6 @@ func (t *tree) Get(path string, handler HandlerFunc, chain ...MiddlewareChain) {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
-	log.Println(newChain)
 	t.append("GET", path, handler, newChain)
 }
 

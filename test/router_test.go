@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	uc "github.com/tungyao/ceder"
+	uc "github.com/tungyao/cedar"
 )
 
 func TestRouter(t *testing.T) {

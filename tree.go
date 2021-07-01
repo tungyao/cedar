@@ -1,4 +1,4 @@
-package ceder
+package cedar
 
 import (
 	"bytes"
