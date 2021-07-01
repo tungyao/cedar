@@ -21,4 +21,4 @@ Improved version for cedar
 > * Elegant middleware
 
 ### Method description (refer to /test/router_test.go)  
-[快速到达](https://github.com/tungyao/ultimate-cedar/blob/main/test/router_test.go)
+[quick view](https://github.com/tungyao/ultimate-cedar/blob/main/test/router_test.go)
