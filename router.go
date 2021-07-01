@@ -122,7 +122,6 @@ func (q *qu) Check(params ...string) (*pData, error) {
 		return nil, fmt.Errorf("query has been required")
 	}
 	for s, i := range q.r.URL.Query() {
-		// log.Println(s, i)
 		if !inArrayString(s, params) || len(i) == 0 {
 			return nil, fmt.Errorf("%s must be required", s)
 		}
@@ -244,88 +243,243 @@ func NewRouter() *tree {
 	return r
 
 }
-func (t *tree) Get(path string, handler HandlerFunc) {
-	t.append("GET", path, handler)
+func (t *tree) Get(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("GET", path, handler, newChain)
 }
 
-func (t *tree) Post(path string, handler HandlerFunc) {
-	t.append("POST", path, handler)
+func (t *tree) Post(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("POST", path, handler, newChain)
 }
 
-func (t *tree) Delete(path string, handler HandlerFunc) {
-	t.append("DELETE", path, handler)
+func (t *tree) Delete(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("DELETE", path, handler, newChain)
 }
 
-func (t *tree) Head(path string, handler HandlerFunc) {
-	t.append("HEAD", path, handler)
+func (t *tree) Head(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("HEAD", path, handler, newChain)
 }
 
-func (t *tree) Options(path string, handler HandlerFunc) {
-	t.append("OPTIONS", path, handler)
+func (t *tree) Options(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("OPTIONS", path, handler, newChain)
 }
 
-func (t *tree) Put(path string, handler HandlerFunc) {
-	t.append("PUT", path, handler)
+func (t *tree) Put(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("PUT", path, handler, newChain)
 }
 
-func (t *tree) Patch(path string, handler HandlerFunc) {
-	t.append("PATCH", path, handler)
+func (t *tree) Patch(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("PATCH", path, handler, newChain)
 }
 
-func (t *tree) Trace(path string, handler HandlerFunc) {
-	t.append("TRACE", path, handler)
+func (t *tree) Trace(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("TRACE", path, handler, newChain)
 }
 
-func (t *tree) Connect(path string, handler HandlerFunc) {
-	t.append("CONNECT", path, handler)
+func (t *tree) Connect(path string, handler HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if len(chain) > 0 {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(newChain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	t.append("CONNECT", path, handler, newChain)
 }
 
-func (gup *Groups) Get(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Get(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Get(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Get(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Head(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Head(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Head(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Head(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Post(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Post(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Post(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Post(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Put(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Put(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Put(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Put(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Patch(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Patch(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Patch(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Patch(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Delete(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Delete(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Delete(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Delete(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Connect(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Connect(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Connect(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Connect(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Trace(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Trace(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Trace(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Trace(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Options(path string, handlerFunc HandlerFunc) {
-	gup.Tree.Options(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc)
+func (gup *Groups) Options(path string, handlerFunc HandlerFunc, chain ...MiddlewareChain) {
+	var newChain MiddlewareChain
+	if (gup.Middleware != nil && len(gup.Middleware) > 0) || (chain != nil && len(chain) > 0) {
+		newChain = make(MiddlewareChain, 0)
+		for i := 0; i < len(gup.Middleware); i++ {
+			newChain = append(newChain, gup.Middleware[i]...)
+		}
+		for i := 0; i < len(chain); i++ {
+			newChain = append(newChain, chain[i]...)
+		}
+	}
+	gup.Tree.Options(gup.Path+"/"+strings.TrimPrefix(path, "/"), handlerFunc, newChain)
 }
 
-func (gup *Groups) Group(path string, fn func(Groups *Groups)) {
+func (gup *Groups) Group(path string, fn func(Groups *Groups), chain ...MiddlewareChain) {
 	g := new(Groups)
 	g.Path = gup.Path + "/" + strings.TrimPrefix(path, "/")
 	g.Tree = gup.Tree
+	g.Middleware = chain
 	fn(g)
 }
 
-func (t *tree) Group(path string, fn func(groups *Groups)) {
+func (t *tree) Group(path string, fn func(groups *Groups), chain ...MiddlewareChain) {
 	g := new(Groups)
 	g.Tree = t
 	g.Path = path
+	g.Middleware = chain
 	fn(g)
 }
