@@ -1,24 +1,8 @@
-```     
- _   _  ____ 
-| | | |/ ___|
-| | | | |    
-| |_| | |___ 
- \___/ \____|
-             
-```
+## welcome to ultimate-cedar lighting framework
 
-# ultimate-cedar
+来源与cedar，同时也是其的增强重构版本，移除了大部分无效功能，从而专注于api，同时也为后续扩展留出更多的空间。
 
-Improved version for cedar
-> 适用于现代api http框架
-
-### 集成以下功能
-
-> * 一次性加解密
-> * 前缀树 + hash 储存路由
-> * json
-> * /:id/:number 匹配
-> * 优雅的中间件
-
-### 方法说明 (可以直接参考 /test/router_test.go 里面的)
-[快速到达](https://github.com/tungyao/ultimate-cedar/blob/main/test/router_test.go)
+## 基础使用方法
+### [中间件使用](/ultimate-cedar/middleware)
+### [路由方法](/ultimate-cedar/router)
+### [群组路由](/ultimate-cedar/group)
