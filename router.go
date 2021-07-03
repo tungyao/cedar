@@ -1,4 +1,4 @@
-package ultimate_cedar
+package cedar
 
 import (
 	"bytes"

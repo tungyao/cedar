@@ -1,4 +1,4 @@
-package ultimate_cedar
+package cedar
 
 type MiddlewareInterceptor func(ResponseWriter, Request, HandlerFunc)
 type MiddlewareChain []MiddlewareInterceptor

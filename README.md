@@ -10,15 +10,15 @@
 # ultimate-cedar
 
 Improved version for cedar
-> Suitable for modern API HTTP frameworks
+> 适用于现代api http框架
 
-### Integrate the following functions
+### 集成以下功能
 
-> * One-time encryption and decryption
-> * The prefix tree + hash stores routes
+> * 一次性加解密
+> * 前缀树 + hash 储存路由
 > * json
-> * /:id/:number matching
-> * Elegant middleware
+> * /:id/:number 匹配
+> * 优雅的中间件
 
-### Method description (refer to /test/router_test.go)  
-[quick view](https://github.com/tungyao/ultimate-cedar/blob/main/test/router_test.go)
+### 方法说明 (可以直接参考 /test/router_test.go 里面的)
+[快速到达](https://github.com/tungyao/ultimate-cedar/blob/main/test/router_test.go)
