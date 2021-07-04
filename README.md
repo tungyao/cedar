@@ -1,4 +1,5 @@
 ## welcome to ultimate-cedar lighting framework
+[![CodeQL](https://github.com/tungyao/ultimate-cedar/actions/workflows/codeql-analysis.yml/badge.svg?branch=main)](https://github.com/tungyao/ultimate-cedar/actions/workflows/codeql-analysis.yml)
 
 来源与cedar，同时也是其的增强重构版本，移除了大部分无效功能，从而专注于api，同时也为后续扩展留出更多的空间。
 
