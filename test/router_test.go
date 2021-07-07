@@ -58,17 +58,44 @@ func TestRouter(t *testing.T) {
 	echoMiddleware := uc.MiddlewareInterceptor(func(writer uc.ResponseWriter, request uc.Request, handlerFunc uc.HandlerFunc) {
 		log.Println(request.URL.Query().Get("echo"))
 		writer.Data("runner middle").Send()
-
 		handlerFunc(writer, request)
+	})
+	logMiddleware := uc.MiddlewareInterceptor(func(writer uc.ResponseWriter, request uc.Request, handlerFunc uc.HandlerFunc) {
+		log.Println("log", request.URL.String())
 	})
 	middleware := uc.MiddlewareChain{
 		echoMiddleware,
+	}
+	logMiddlewareGroup := uc.MiddlewareChain{
+		logMiddleware,
 	}
 	r.Get("test_middle", middleware.Handler(func(writer uc.ResponseWriter, request uc.Request) {
 		writer.Data("hello world").Send()
 	}))
 
+	// test new middleware
+	r.Get("test_new_middle", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data("hello new world").Send()
+	}, middleware)
+	// test new middleware for group
+	r.Group("new_middle", func(groups *uc.Groups) {
+		groups.Get("echo", func(writer uc.ResponseWriter, request uc.Request) {
+			writer.Data("hello new_middle echo").Send()
+		}, logMiddlewareGroup)
+	}, middleware)
 	if err := http.ListenAndServe(":9000", r); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func TestEncryption(t *testing.T) {
+	r := uc.NewRouter()
+	r.Get("en", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data("hello world").Encode("F431jiyr3e0ag3wiAygjjTur0fh84sLr").Send()
+	})
+	r.Post("de", func(writer uc.ResponseWriter, request uc.Request) {
+		t.Log(request.Decode(nil))
+	})
+	http.ListenAndServe(":9000", r)
+
 }
