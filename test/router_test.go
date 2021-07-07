@@ -87,3 +87,15 @@ func TestRouter(t *testing.T) {
 		log.Fatalln(err)
 	}
 }
+
+func TestEncryption(t *testing.T) {
+	r := uc.NewRouter()
+	r.Get("en", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data("hello world").Encode("F431jiyr3e0ag3wiAygjjTur0fh84sLr").Send()
+	})
+	r.Post("de", func(writer uc.ResponseWriter, request uc.Request) {
+		t.Log(request.Decode(nil))
+	})
+	http.ListenAndServe(":9000", r)
+
+}

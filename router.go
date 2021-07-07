@@ -3,18 +3,18 @@ package cedar
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
+	json "github.com/json-iterator/go"
 	"io"
 	"log"
-	"math"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
-	"unicode/utf8"
-
-	json "github.com/json-iterator/go"
 )
 
 // 在想能不能借助数组来存放路由
@@ -63,51 +63,77 @@ type en struct {
 	ctx context.Context
 }
 
-func (e *en) Decode(any interface{}) error {
+func (e *en) Decode(any interface{}) ([]byte, error) {
 	b, err := io.ReadAll(e.r.Body)
 	defer e.r.Body.Close()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if key := e.r.Header.Get("tyrant"); key != "" {
 		dsk, err := base64.StdEncoding.DecodeString(string(b))
 		if err != nil {
-			return err
+			return nil, err
 		}
-		var (
-			b1 int32
-			b2 int32
-			b3 int32
-			d  int
-		)
-		var k = int32(len(key))
-		var s = make([]rune, int(math.Floor(float64(len(dsk)/3))))
-		for i := 0; i < len(s); i++ {
-			b1 = int32(strings.IndexByte(key, dsk[d]))
-			d++
-			b2 = int32(strings.IndexByte(key, dsk[d]))
-			d++
-			b3 = int32(strings.IndexByte(key, dsk[d]))
-			d++
-			s[i] = b1*k*k + b2*k + b3
+		dsk, err = AesDecryptCBC(dsk, []byte(key))
+		if any == nil {
+			return dsk, nil
+
 		}
-		return json.Unmarshal(runes2str(s), any)
+		if tp := reflect.TypeOf(any).Elem().Kind(); tp == reflect.Map || tp == reflect.Struct {
+			return dsk, json.Unmarshal(dsk, any)
+		}
+		return dsk, nil
 	}
-	return json.Unmarshal(b, any)
-}
-func runes2str(s []int32) []byte {
-	var p []byte
-	for _, r := range s {
-		buf := make([]byte, 3)
-		if r > 128 {
-			_ = utf8.EncodeRune(buf, r)
-			p = append(p, buf...)
-		} else {
-			p = append(p, byte(r))
-		}
+	if any == nil {
+		return b, nil
 
 	}
-	return p
+	return b, json.Unmarshal(b, any)
+}
+
+func (j *Json) Encode(key string) *Json {
+	j.header["tyrant"] = key
+	by, err := AesEncryptCBC(j.data, []byte(key))
+	if err != nil {
+		log.Println(err)
+	}
+	j.data = []byte(base64.StdEncoding.EncodeToString(by))
+	return j
+}
+
+func AesEncryptCBC(origData []byte, key []byte) (encrypted []byte, err error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockSize := block.BlockSize()
+	origData = pkcs5Padding(origData, blockSize)
+	blockMode := cipher.NewCBCEncrypter(block, key[:blockSize])
+	encrypted = make([]byte, len(origData))
+	blockMode.CryptBlocks(encrypted, origData)
+	return encrypted, nil
+}
+func AesDecryptCBC(encrypted []byte, key []byte) (decrypted []byte, err error) {
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return nil, err
+	}
+	blockSize := block.BlockSize()
+	blockMode := cipher.NewCBCDecrypter(block, key[:blockSize])
+	decrypted = make([]byte, len(encrypted))
+	blockMode.CryptBlocks(decrypted, encrypted)
+	decrypted = pkcs5UnPadding(decrypted)
+	return decrypted, err
+}
+func pkcs5Padding(ciphertext []byte, blockSize int) []byte {
+	padding := blockSize - len(ciphertext)%blockSize
+	padtext := bytes.Repeat([]byte{byte(padding)}, padding)
+	return append(ciphertext, padtext...)
+}
+func pkcs5UnPadding(origData []byte) []byte {
+	length := len(origData)
+	unpadding := int(origData[length-1])
+	return origData[:(length - unpadding)]
 }
 
 type qu struct {
@@ -188,27 +214,6 @@ func (j *Json) Send() {
 		j.writer.WriteHeader(j.status)
 	})
 	_, _ = j.writer.Write(j.data)
-}
-
-func (j *Json) Encode(key string) *Json {
-	j.header["tyrant"] = key
-	var by = make([]byte, 0)
-	var (
-		b1 int32
-		b2 int32
-		b3 int32
-	)
-	var k = int32(len(key))
-	for _, v := range bytes.Runes(j.data) {
-		b1 = v % k
-		v = (v - b1) / k
-		b2 = v % k
-		v = (v - b2) / k
-		b3 = v % k
-		by = append(by, key[b3], key[b2], key[b1])
-	}
-	j.data = []byte(base64.StdEncoding.EncodeToString(by))
-	return j
 }
 
 type method struct {
