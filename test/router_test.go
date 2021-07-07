@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"testing"
 
-	uc "github.com/tungyao/cedar"
+	uc "github.com/tungyao/ultimate-cedar"
 )
 
 func TestRouter(t *testing.T) {
@@ -86,4 +86,16 @@ func TestRouter(t *testing.T) {
 	if err := http.ListenAndServe(":9000", r); err != nil {
 		log.Fatalln(err)
 	}
+}
+
+func TestEncryption(t *testing.T) {
+	r := uc.NewRouter()
+	r.Get("en", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data("hello world").Encode("F431jiyr3e0ag3wiAygjjTur0fh84sLr").Send()
+	})
+	r.Post("de", func(writer uc.ResponseWriter, request uc.Request) {
+		t.Log(request.Decode(nil))
+	})
+	http.ListenAndServe(":9000", r)
+
 }
