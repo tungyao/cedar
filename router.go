@@ -263,7 +263,7 @@ func (t *tree) Post(path string, handler HandlerFunc, chain ...MiddlewareChain) 
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
