@@ -263,7 +263,7 @@ func (t *tree) Post(path string, handler HandlerFunc, chain ...MiddlewareChain) 
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -274,7 +274,7 @@ func (t *tree) Delete(path string, handler HandlerFunc, chain ...MiddlewareChain
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -285,7 +285,7 @@ func (t *tree) Head(path string, handler HandlerFunc, chain ...MiddlewareChain) 
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -296,7 +296,7 @@ func (t *tree) Options(path string, handler HandlerFunc, chain ...MiddlewareChai
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -307,7 +307,7 @@ func (t *tree) Put(path string, handler HandlerFunc, chain ...MiddlewareChain) {
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -318,7 +318,7 @@ func (t *tree) Patch(path string, handler HandlerFunc, chain ...MiddlewareChain)
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -329,7 +329,7 @@ func (t *tree) Trace(path string, handler HandlerFunc, chain ...MiddlewareChain)
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -340,7 +340,7 @@ func (t *tree) Connect(path string, handler HandlerFunc, chain ...MiddlewareChai
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}

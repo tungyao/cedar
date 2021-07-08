@@ -82,6 +82,24 @@ func TestRouter(t *testing.T) {
 		groups.Get("echo", func(writer uc.ResponseWriter, request uc.Request) {
 			writer.Data("hello new_middle echo").Send()
 		}, logMiddlewareGroup)
+		groups.Post("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
+		groups.Patch("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
+		groups.Put("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
+		groups.Options("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
+		groups.Connect("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
+		groups.Head("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+		})
 	}, middleware)
 	if err := http.ListenAndServe(":9000", r); err != nil {
 		log.Fatalln(err)
