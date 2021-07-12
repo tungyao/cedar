@@ -63,7 +63,7 @@ type en struct {
 	ctx context.Context
 }
 
-func (e *en) Decode(any interface{}) ([]byte, error) {
+func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 	b, err := io.ReadAll(e.r.Body)
 	defer e.r.Body.Close()
 	if err != nil {
@@ -90,7 +90,13 @@ func (e *en) Decode(any interface{}) ([]byte, error) {
 	}
 	return b, json.Unmarshal(b, any)
 }
-
+func (e *en) Decode(key string, byt []byte) ([]byte, error) {
+	dsk, err := base64.StdEncoding.DecodeString(string(byt))
+	if err != nil {
+		return nil, err
+	}
+	return AesDecryptCBC(dsk, []byte(key))
+}
 func (j *Json) Encode(key string) *Json {
 	j.header["tyrant"] = key
 	by, err := AesEncryptCBC(j.data, []byte(key))
