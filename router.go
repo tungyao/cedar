@@ -7,7 +7,7 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
-	json "github.com/json-iterator/go"
+	"github.com/json-iterator/go"
 	"io"
 	"log"
 	"net/http"
@@ -80,7 +80,7 @@ func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 
 		}
 		if tp := reflect.TypeOf(any).Elem().Kind(); tp == reflect.Map || tp == reflect.Struct {
-			return dsk, json.Unmarshal(dsk, any)
+			return dsk, jsoniter.Unmarshal(dsk, any)
 		}
 		return dsk, nil
 	}
@@ -88,7 +88,7 @@ func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 		return b, nil
 
 	}
-	return b, json.Unmarshal(b, any)
+	return b, jsoniter.Unmarshal(b, any)
 }
 func (e *en) Decode(key string, byt []byte) ([]byte, error) {
 	dsk, err := base64.StdEncoding.DecodeString(string(byt))
@@ -162,6 +162,11 @@ func (q *qu) Check(params ...string) (*pData, error) {
 	return q.data, nil
 }
 
+// Get get query params from url
+func (q *qu) Get(key string) string {
+	return q.r.URL.Query().Get(key)
+}
+
 type Json struct {
 	writer http.ResponseWriter
 	header map[string]string
@@ -197,7 +202,7 @@ func (j *Json) Data(any interface{}) *Json {
 		j.data = j.t.template[0](any.(error))
 		return j
 	}
-	b, err := json.Marshal(any)
+	b, err := jsoniter.Marshal(any)
 	if err != nil {
 		log.Panicln(err)
 	}

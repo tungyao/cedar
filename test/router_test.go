@@ -47,6 +47,9 @@ func TestRouter(t *testing.T) {
 	// test check query params
 	r.Get("test_query_check", func(writer uc.ResponseWriter, request uc.Request) {
 		var err error
+
+		// new func
+		request.Query.Get("key")
 		if d, err := request.Query.Check("id"); err == nil {
 			log.Println(d)
 			return
@@ -70,6 +73,7 @@ func TestRouter(t *testing.T) {
 		logMiddleware,
 	}
 	r.Get("test_middle", middleware.Handler(func(writer uc.ResponseWriter, request uc.Request) {
+		request.Query.Check()
 		writer.Data("hello world").Send()
 	}))
 
@@ -112,7 +116,7 @@ func TestEncryption(t *testing.T) {
 		writer.Data("hello world").Encode("F431jiyr3e0ag3wiAygjjTur0fh84sLr").Send()
 	})
 	r.Post("de", func(writer uc.ResponseWriter, request uc.Request) {
-		t.Log(request.Decode(nil))
+		t.Log(request.Decode("", nil))
 	})
 	http.ListenAndServe(":9000", r)
 
