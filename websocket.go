@@ -76,39 +76,43 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	cedarWebsocketHub.Delete(key)
 }
 
+func socketReplay(op int, data []byte) []byte {
+	var frame = make([]byte, 0)
+	bl := len(data)
+	switch {
+	case bl <= 125: // Payload length 7bits.
+	case bl == 126: // Payload length 7+16bits
+
+	case bl == 127: // Payload length 7+64bits
+	}
+	frame = append(frame, byte(0x1<<7+op))
+	var f2 byte
+	f2 |= 0
+	lengthFields := 0
+	length := len(data)
+	switch {
+	case length <= 125:
+		f2 |= byte(length)
+	case length < 65536:
+		f2 |= 126
+		lengthFields = 2
+	default:
+		f2 |= 127
+		lengthFields = 8
+	}
+	frame = append(frame, f2)
+	for i := 0; i < lengthFields; i++ {
+		j := uint((lengthFields - i - 1) * 8)
+		b := byte((length >> j) & 0xff)
+		frame = append(frame, b)
+	}
+	frame = append(frame, data...)
+	return frame
+}
+
 func WebsocketSwitchPush(key string, op int, data []byte) error {
 	if nc, ok := cedarWebsocketHub.Load(key); ok {
-		var frame = make([]byte, 0)
-		bl := len(data)
-		switch {
-		case bl <= 125: // Payload length 7bits.
-		case bl == 126: // Payload length 7+16bits
-
-		case bl == 127: // Payload length 7+64bits
-		}
-		frame = append(frame, byte(0x1<<7+op))
-		var f2 byte
-		f2 |= 0
-		lengthFields := 0
-		length := len(data)
-		switch {
-		case length <= 125:
-			f2 |= byte(length)
-		case length < 65536:
-			f2 |= 126
-			lengthFields = 2
-		default:
-			f2 |= 127
-			lengthFields = 8
-		}
-		frame = append(frame, f2)
-		for i := 0; i < lengthFields; i++ {
-			j := uint((lengthFields - i - 1) * 8)
-			b := byte((length >> j) & 0xff)
-			frame = append(frame, b)
-		}
-		frame = append(frame, data...)
-		_, err := nc.(net.Conn).Write(frame)
+		_, err := nc.(net.Conn).Write(socketReplay(op, data))
 		if err != nil {
 			return err
 		}
@@ -158,12 +162,19 @@ again:
 	if debug {
 		log.Println("[cedar] websocket FIN", fin)
 	}
-	if header[0]&0x0f == 8 {
+	opcode := header[0] & 0x0f
+	// replay opcode for ping
+	switch opcode {
+	case 0x8:
 		return nil, fmt.Errorf("client close")
+	case 0x9:
+		socketReplay(0xA, []byte("pong"))
+		return nil, nil
 	}
 	if debug {
-		log.Println("[cedar] websocket OPCODE", header[0]&0x0f)
+		log.Println("[cedar] websocket OPCODE", opcode)
 	}
+
 	// 计算机的二进制骚操作 位运算
 	// & | >> <<
 	// Second byte. Mask/Payload len(7bits)
