@@ -58,9 +58,9 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	if err != nil {
 		log.Panicln(err)
 	}
-	closeHj := make(chan bool)
 	cedarWebsocketHub.Store(key, nc)
-	go func() {
+	go func(nc net.Conn) {
+		closeHj := make(chan bool)
 		for {
 			cwb, err := NewCedarWebSocketBuffReader(nc)
 			if err != nil {
@@ -70,10 +70,10 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 			}
 			fn(cwb)
 		}
-	}()
-	<-closeHj
-	nc.Close()
-	cedarWebsocketHub.Delete(key)
+		<-closeHj
+		nc.Close()
+		cedarWebsocketHub.Delete(key)
+	}(nc)
 }
 
 func socketReplay(op int, data []byte) []byte {
