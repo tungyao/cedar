@@ -15,4 +15,4 @@
 ## 开源赞助
 
 
-<img alt="jetbrains" height="100" src="https://static.tungyao.com/313531363739d41d8cd98f00b204e9800998ecf8427e.png" title="jetbrains logo" width="100"/>
+<img alt="jetbrains" src="https://account.jetbrains.com/static/images/jetbrains-logo-inv.svg" width="100" height="100"/>
