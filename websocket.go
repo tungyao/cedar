@@ -2,128 +2,242 @@ package ultimate_cedar
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/base64"
+	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"sync"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 const MagicWebsocketKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
+var cedarWebsocketHub *sync.Map
+
+// WebsocketSwitchProtocol
 // 用来扩展websocket
 // 只实现了保持在线和推送
-
 // GET /chat HTTP/1.1
 // Host: example.com:8000
 // Upgrade: websocket
 // Connection: Upgrade
 // Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 // Sec-WebSocket-Version: 13
-func switchProtocol(w http.ResponseWriter, r *http.Request) {
+func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader)) {
+	// 申请一个map
+	if cedarWebsocketHub == nil {
+		cedarWebsocketHub = &sync.Map{}
+	}
 	version := r.Header.Get("Sec-Websocket-Version")
-	log.Println("version is", version)
+	if debug {
+		log.Println("[cedar] websocket version", version)
+	}
 	if version != "13" {
 		w.WriteHeader(400)
 		return
 	}
-	key := r.Header.Get("Sec-WebSocket-Key")
+	swKey := r.Header.Get("Sec-WebSocket-Key")
 	// 计算值
-	newKey := getNewKey(key)
+	newKey := getNewKey(swKey)
 	w.Header().Add("Upgrade", "websocket")
 	w.Header().Add("Connection", "Upgrade")
 	w.Header().Add("Sec-Websocket-Accept", newKey)
 	w.WriteHeader(http.StatusSwitchingProtocols)
-	w.Write(nil)
-	hj, ok := w.(http.Hijacker)
+	_, err := w.Write(nil)
+	if err != nil {
+		return
+	}
+	hj, ok := w.writer.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Not a Hijacker", 500)
 		return
 	}
 	nc, _, err := hj.Hijack()
 	if err != nil {
-		log.Println(err)
+		log.Panicln(err)
 	}
 	closeHj := make(chan bool)
+	cedarWebsocketHub.Store(key, nc)
 	go func() {
 		for {
-			buf := bufio.NewReader(nc)
-			var header []byte
-			var b byte
-			// First byte. FIN/RSV1/RSV2/RSV3/OpCode(4bits)
-			b, err = buf.ReadByte()
+			cwb, err := NewCedarWebSocketBuffReader(nc)
 			if err != nil {
-				return
+				log.Println(err)
+				closeHj <- true
+				break
 			}
-			header = append(header, b)
-			fin := ((header[0] >> 7) & 1) != 0
-			log.Println("FIN", fin)
-			for i := 0; i < 3; i++ {
-				j := uint(6 - i)
-				log.Println("RSV", i, ((header[0]>>j)&1) != 0)
-			}
-
-			// 计算机的二进制骚操作 位运算
-			// & | >> <<
-			log.Println("OPCODE", header[0]&0x0f)
-
-			// Second byte. Mask/Payload len(7bits)
-			b, err = buf.ReadByte()
-			if err != nil {
-				return
-			}
-			header = append(header, b)
-			mask := (b & 0x80) != 0
-			log.Println("MASK", mask)
-			b &= 0x7f
-			lengthFields := 0
-			switch {
-			case b <= 125: // Payload length 7bits.
-				log.Println("PLAYLOAD lENGTH 7 BITS", int64(b))
-			case b == 126: // Payload length 7+16bits
-				log.Println("PLAYLOAD lENGTH 7+16 BITS", int64(b))
-				lengthFields = 2
-			case b == 127: // Payload length 7+64bits
-				log.Println("PLAYLOAD lENGTH 7+64 BITS", int64(b))
-				lengthFields = 8
-			}
-			var headerLength int64 = 0
-			log.Println("LENGTH FIEDLDS", lengthFields)
-			for i := 0; i < lengthFields; i++ {
-				b, err = buf.ReadByte()
-				if err != nil {
-					return
-				}
-				if lengthFields == 8 && i == 0 { // MSB must be zero when 7+64 bits
-					b &= 0x7f
-				}
-				header = append(header, b)
-				headerLength = headerLength*256 + int64(b)
-			}
-			log.Println("HEADER LENGTH", headerLength)
-			maskKey := make([]byte, 0)
-			if mask {
-				// Masking key. 4 bytes.
-				for i := 0; i < 4; i++ {
-					b, err = buf.ReadByte()
-					if err != nil {
-						return
-					}
-					header = append(header, b)
-					maskKey = append(maskKey, b)
-				}
-			}
-			out := make([]byte, 0)
-			log.Println(buf.Size(), len(header))
-			log.Println(buf.ReadBytes(2))
-			log.Println("1", out)
-			log.Println(string(bytes.NewBuffer(out).String()))
+			fn(cwb)
 		}
 	}()
 	<-closeHj
-	log.Println("close connection")
 	nc.Close()
+	cedarWebsocketHub.Delete(key)
+}
+
+func WebsocketSwitchPush(key string, op int, data []byte) error {
+	if nc, ok := cedarWebsocketHub.Load(key); ok {
+		var frame = make([]byte, 0)
+		bl := len(data)
+		switch {
+		case bl <= 125: // Payload length 7bits.
+		case bl == 126: // Payload length 7+16bits
+
+		case bl == 127: // Payload length 7+64bits
+		}
+		frame = append(frame, byte(0x1<<7+op))
+		var f2 byte
+		f2 |= 0
+		lengthFields := 0
+		length := len(data)
+		switch {
+		case length <= 125:
+			f2 |= byte(length)
+		case length < 65536:
+			f2 |= 126
+			lengthFields = 2
+		default:
+			f2 |= 127
+			lengthFields = 8
+		}
+		frame = append(frame, f2)
+		for i := 0; i < lengthFields; i++ {
+			j := uint((lengthFields - i - 1) * 8)
+			b := byte((length >> j) & 0xff)
+			frame = append(frame, b)
+		}
+		frame = append(frame, data...)
+		_, err := nc.(net.Conn).Write(frame)
+		if err != nil {
+			return err
+		}
+		return nil
+	} else {
+		return fmt.Errorf("not find this key %s", key)
+	}
 }
 
 func getNewKey(key string) string {
 	return base64.StdEncoding.EncodeToString(GetSha1([]byte(key+MagicWebsocketKey), nil))
+}
+
+// cedarWebsocketBuffScan 快速读取json
+// Scan usage *CedarWebSocketBuffReader.Scan
+type cedarWebsocketBuffScan interface {
+	Scan(v interface{}) error
+}
+
+// CedarWebSocketBuffReader 读取websocket协议,这里的websocket主要针对 4086byte 的文本格式
+// Data 读取的文本载荷
+// Length 文本[]byte长度
+type CedarWebSocketBuffReader struct {
+	Data   []byte
+	Length int
+	cedarWebsocketBuffScan
+}
+
+func NewCedarWebSocketBuffReader(nc net.Conn) (*CedarWebSocketBuffReader, error) {
+	sbr := new(CedarWebSocketBuffReader)
+	goto again
+again:
+	buf := bufio.NewReader(nc)
+	var header []byte
+	var b byte
+	// First byte. FIN/RSV1/RSV2/RSV3/OpCode(4bits)
+	b, err := buf.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	header = append(header, b)
+	// for i := 0; i < 3; i++ {
+	// 	j := uint(6 - i)
+	// 	log.Println("RSV", i, ((header[0]>>j)&1) != 0)
+	// }
+	fin := (header[0]>>7)&1 != 0
+	if debug {
+		log.Println("[cedar] websocket FIN", fin)
+	}
+	if header[0]&0x0f == 8 {
+		return nil, fmt.Errorf("client close")
+	}
+	if debug {
+		log.Println("[cedar] websocket OPCODE", header[0]&0x0f)
+	}
+	// 计算机的二进制骚操作 位运算
+	// & | >> <<
+	// Second byte. Mask/Payload len(7bits)
+	b, err = buf.ReadByte()
+	if err != nil {
+		return nil, err
+	}
+	header = append(header, b)
+	mask := (b & 0x80) != 0
+	b &= 0x7f
+	lengthFields := 0
+	var headerLength int64 = 0
+	switch {
+	case b <= 125: // Payload length 7bits.
+		headerLength = int64(b)
+	case b == 126: // Payload length 7+16bits
+		lengthFields = 2
+	case b == 127: // Payload length 7+64bits
+		lengthFields = 8
+	}
+	for i := 0; i < lengthFields; i++ {
+		b, err = buf.ReadByte()
+		if err != nil {
+			return nil, err
+		}
+		if lengthFields == 8 && i == 0 { // MSB must be zero when 7+64 bits
+			b &= 0x7f
+		}
+		header = append(header, b)
+		headerLength = headerLength*256 + int64(b)
+	}
+	if debug {
+		log.Println("[cedar] websocket Payload length", headerLength)
+	}
+	maskKey := make([]byte, 0)
+	if mask {
+		// Masking key. 4 bytes.
+		for i := 0; i < 4; i++ {
+			b, err = buf.ReadByte()
+			if err != nil {
+				return nil, err
+			}
+			header = append(header, b)
+			maskKey = append(maskKey, b)
+		}
+	}
+	// XorDecodeStr()
+	payload := make([]byte, headerLength)
+	kl := len(maskKey)
+	if mask {
+		for i := 0; i < len(payload); i++ {
+			b, err = buf.ReadByte()
+			payload[i] = b ^ maskKey[i%kl]
+		}
+	} else {
+		for i := 0; i < len(payload); i++ {
+			b, err = buf.ReadByte()
+			if err != nil {
+				break
+			}
+			payload[i] = b
+		}
+	}
+	sbr.Data = append(sbr.Data, payload...)
+	sbr.Length += len(payload)
+	sbr.cedarWebsocketBuffScan = nil
+	if !fin {
+		goto again
+	}
+	return sbr, nil
+}
+func (sbr *CedarWebSocketBuffReader) Scan(v interface{}) error {
+	if sbr.Length == 0 {
+		return fmt.Errorf("data length is zero")
+	}
+	return jsoniter.Unmarshal(sbr.Data, v)
 }

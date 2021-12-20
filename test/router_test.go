@@ -121,3 +121,17 @@ func TestEncryption(t *testing.T) {
 	http.ListenAndServe(":9000", r)
 
 }
+
+func TestWebsocket(t *testing.T) {
+	r := uc.NewRouter()
+	// r.Debug()
+	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
+		uc.WebsocketSwitchProtocol(writer, request, "123", func(value *uc.CedarWebSocketBuffReader) {
+			log.Println(value)
+		})
+	})
+	r.Post("/ws/push", func(writer uc.ResponseWriter, request uc.Request) {
+		uc.WebsocketSwitchPush("123", 0x1, []byte("hello world"))
+	})
+	http.ListenAndServe(":8080", r)
+}

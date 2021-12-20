@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -196,4 +198,12 @@ func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (t *tree) ErrorTemplate(f func(err error) []byte) {
 	t.template[0] = f
+}
+
+var debug = false
+
+func (t *tree) Debug() {
+	log.Println("cedar will into the debug mode")
+	os.Setenv("ultimate-cedar-debug", "yes")
+	debug = true
 }
