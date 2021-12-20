@@ -64,7 +64,9 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		for {
 			cwb, err := NewCedarWebSocketBuffReader(nc)
 			if err != nil {
-				log.Println(err)
+				if debug {
+					log.Println(err)
+				}
 				closeHj <- true
 				break
 			}
