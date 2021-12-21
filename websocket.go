@@ -74,6 +74,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		}
 		<-closeHj
 		nc.Close()
+		close(closeHj)
 		cedarWebsocketHub.Delete(key)
 	}(nc)
 }
