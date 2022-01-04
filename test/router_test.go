@@ -25,12 +25,11 @@ func TestRouter(t *testing.T) {
 
 	// test return chain
 	r.Get("ccc", func(writer uc.ResponseWriter, request uc.Request) {
-		writer.Json.
+		writer.
 			ContentType("application/json").
 			AddHeader("time", "unix").
 			Data(map[string]string{"a": "b"}).
-			Status(403).
-			Encode("123123").
+			Status(200).
 			Send()
 	})
 
