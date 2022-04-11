@@ -168,15 +168,13 @@ func (t *tree) find(r Request) HandlerFunc {
 func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	ctx := context.Background()
 	e := &en{
-		r:   r,
-		ctx: ctx,
+		r: r,
 	}
 	q := &qu{
 		r:    r,
-		ctx:  ctx,
 		data: &pData{data: make(map[string]string)},
 	}
-	rq := Request{r, e, q, &data{data: make(map[string]string)}}
+	rq := Request{r, e, q, &data{data: make(map[string]string)}, ctx}
 	handler := t.find(rq)
 	if handler != nil {
 		wx := ResponseWriter{

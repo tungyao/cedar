@@ -1,6 +1,7 @@
 package test
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"testing"
@@ -64,6 +65,9 @@ func TestRouter(t *testing.T) {
 	})
 	logMiddleware := uc.MiddlewareInterceptor(func(writer uc.ResponseWriter, request uc.Request, handlerFunc uc.HandlerFunc) {
 		log.Println("log", request.URL.String())
+		// add context
+		request.Context = context.WithValue(request.Context, "member", "hello")
+		handlerFunc(writer, request)
 	})
 	middleware := uc.MiddlewareChain{
 		echoMiddleware,
@@ -83,6 +87,9 @@ func TestRouter(t *testing.T) {
 	// test new middleware for group
 	r.Group("new_middle", func(groups *uc.Groups) {
 		groups.Get("echo", func(writer uc.ResponseWriter, request uc.Request) {
+
+			// add context
+			log.Println(request.Context.Value("member"))
 			writer.Data("hello new_middle echo").Send()
 		}, logMiddlewareGroup)
 		groups.Post("echo", func(writer uc.ResponseWriter, request uc.Request) {

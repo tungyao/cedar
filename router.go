@@ -7,7 +7,6 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
-	"github.com/json-iterator/go"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/json-iterator/go"
 )
 
 // 在想能不能借助数组来存放路由
@@ -32,8 +33,9 @@ type ResponseWriter struct {
 type Request struct {
 	*http.Request
 	*en
-	Query *qu
-	Data  *data
+	Query   *qu
+	Data    *data
+	Context context.Context
 }
 
 type pData struct {
@@ -59,8 +61,7 @@ func (_d *data) set(key, value string) {
 }
 
 type en struct {
-	r   *http.Request
-	ctx context.Context
+	r *http.Request
 }
 
 func (e *en) DecodeBody(any interface{}) ([]byte, error) {
