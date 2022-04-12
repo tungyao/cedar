@@ -8,7 +8,7 @@
 
 ## 基础使用方法
 ### [中间件使用](https://tungyao.github.io/ultimate-cedar/middleware)
- * ### [新增中间件的数值传递](https://tungyao.github.com/ultimate-cedar/middleware/context)
+ * ### [新增中间件的数值传递](https://tungyao.github.io/ultimate-cedar/middleware/context)
 ### [路由方法](https://tungyao.github.io/ultimate-cedar/router)
 ### [群组路由](https://tungyao.github.io/ultimate-cedar/group)
 ### [集成方法](https://tungyao.github.io/ultimate-cedar/ultimate)
