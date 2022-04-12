@@ -1,7 +1,6 @@
 package test
 
 import (
-	"context"
 	"log"
 	"net/http"
 	"testing"
@@ -66,7 +65,7 @@ func TestRouter(t *testing.T) {
 	logMiddleware := uc.MiddlewareInterceptor(func(writer uc.ResponseWriter, request uc.Request, handlerFunc uc.HandlerFunc) {
 		log.Println("log", request.URL.String())
 		// add context
-		request.Context = context.WithValue(request.Context, "member", "hello")
+		request.Context.Set("member", "hello")
 		handlerFunc(writer, request)
 	})
 	middleware := uc.MiddlewareChain{

@@ -174,7 +174,7 @@ func (t *tree) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		r:    r,
 		data: &pData{data: make(map[string]string)},
 	}
-	rq := Request{r, e, q, &data{data: make(map[string]string)}, ctx}
+	rq := Request{r, e, q, &data{data: make(map[string]string)}, Context{ctx}}
 	handler := t.find(rq)
 	if handler != nil {
 		wx := ResponseWriter{

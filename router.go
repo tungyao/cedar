@@ -26,6 +26,9 @@ import (
 
 // HandlerFunc Handler 对原来的方法进行重写
 type HandlerFunc func(ResponseWriter, Request)
+type Context struct {
+	context.Context
+}
 type ResponseWriter struct {
 	http.ResponseWriter
 	*Json
@@ -35,7 +38,11 @@ type Request struct {
 	*en
 	Query   *qu
 	Data    *data
-	Context context.Context
+	Context Context
+}
+
+func (c *Context) Set(key, val any) {
+	c.Context = context.WithValue(c.Context, key, val)
 }
 
 type pData struct {
