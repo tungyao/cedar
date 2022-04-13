@@ -76,6 +76,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		nc.Close()
 		close(closeHj)
 		cedarWebsocketHub.Delete(key)
+		log.Println("disconnect")
 	}(nc)
 }
 
@@ -157,10 +158,6 @@ again:
 		return nil, err
 	}
 	header = append(header, b)
-	// for i := 0; i < 3; i++ {
-	// 	j := uint(6 - i)
-	// 	log.Println("RSV", i, ((header[0]>>j)&1) != 0)
-	// }
 	fin := (header[0]>>7)&1 != 0
 	if debug {
 		log.Println("[cedar] websocket FIN", fin)
@@ -177,9 +174,6 @@ again:
 	if debug {
 		log.Println("[cedar] websocket OPCODE", opcode)
 	}
-
-	// 计算机的二进制骚操作 位运算
-	// & | >> <<
 	// Second byte. Mask/Payload len(7bits)
 	b, err = buf.ReadByte()
 	if err != nil {

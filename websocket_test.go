@@ -12,8 +12,8 @@ func Test_switchProtocol(t *testing.T) {
 	r := NewRouter()
 	// r.Debug()
 	r.Get("/ws", func(writer ResponseWriter, request Request) {
-		WebsocketSwitchProtocol(writer, request, "123", func(value *cedarWebSocketBuffReader) {
-			log.Println(value)
+		WebsocketSwitchProtocol(writer, request, "123", func(value *CedarWebSocketBuffReader) {
+			log.Println(string(value.Data))
 		})
 	})
 	r.Post("/ws/push", func(writer ResponseWriter, request Request) {
