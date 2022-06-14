@@ -129,6 +129,7 @@ func TestEncryption(t *testing.T) {
 
 func TestWebsocket(t *testing.T) {
 	r := uc.NewRouter()
+	r.Debug()
 	// r.Debug()
 	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
 		uc.WebsocketSwitchProtocol(writer, request, "123", func(value *uc.CedarWebSocketBuffReader) {
@@ -136,7 +137,10 @@ func TestWebsocket(t *testing.T) {
 		})
 	})
 	r.Post("/ws/push", func(writer uc.ResponseWriter, request uc.Request) {
-		uc.WebsocketSwitchPush("123", 0x1, []byte("hello world"))
+		err := uc.WebsocketSwitchPush("123", 0x1, []byte(`{"key":"123","data":"hello world"}`))
+		if err != nil {
+			return
+		}
 	})
 	http.ListenAndServe(":8080", r)
 }

@@ -7,7 +7,10 @@
 <body>
 
 <script>
-    const ws = new WebSocket("ws://localhost:8080/ws")
+    const ws = new WebSocket("ws://localhost:8080/ws?ak=123")
+    ws.onmessage = function (e) {
+        console.log(e);
+    }
 </script>
 </body>
 </html>

@@ -58,25 +58,37 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	if err != nil {
 		log.Panicln(err)
 	}
-	cedarWebsocketHub.Store(key, nc)
+	room, ok := cedarWebsocketHub.Load(key)
+	log.Println(room, ok)
+	if !ok {
+		room2 := make(map[string]net.Conn)
+		room2[nc.RemoteAddr().String()] = nc
+		cedarWebsocketHub.Store(key, room2)
+		room = room2
+	}
+	room.(map[string]net.Conn)[nc.RemoteAddr().String()] = nc
+	// cedarWebsocketHub.Store(key, nc)
 	go func(nc net.Conn) {
 		closeHj := make(chan bool)
 		for {
 			cwb, err := NewCedarWebSocketBuffReader(nc)
 			if err != nil {
 				if debug {
-					log.Println(err)
+					log.Println("[cedar] websocket", err)
 				}
-				closeHj <- true
 				break
 			}
 			fn(cwb)
 		}
-		<-closeHj
+		if debug {
+			log.Println("[cedar] websocket close channel")
+		}
 		nc.Close()
 		close(closeHj)
-		cedarWebsocketHub.Delete(key)
-		log.Println("disconnect")
+		delete(room.(map[string]net.Conn), nc.RemoteAddr().String())
+		if debug {
+			log.Println("[cedar] websocket disconnect")
+		}
 	}(nc)
 }
 
@@ -116,9 +128,11 @@ func socketReplay(op int, data []byte) []byte {
 
 func WebsocketSwitchPush(key string, op int, data []byte) error {
 	if nc, ok := cedarWebsocketHub.Load(key); ok {
-		_, err := nc.(net.Conn).Write(socketReplay(op, data))
-		if err != nil {
-			return err
+		for _, conn := range nc.(map[string]net.Conn) {
+			_, err := conn.Write(socketReplay(op, data))
+			if err != nil {
+				return err
+			}
 		}
 		return nil
 	} else {
@@ -148,7 +162,6 @@ type CedarWebSocketBuffReader struct {
 func NewCedarWebSocketBuffReader(nc net.Conn) (*CedarWebSocketBuffReader, error) {
 	go func() {
 		if err := recover(); err != nil {
-			nc.Close()
 			log.Println("[cedar] websocket recover error", err)
 		}
 	}()
