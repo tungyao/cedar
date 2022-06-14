@@ -146,6 +146,12 @@ type CedarWebSocketBuffReader struct {
 }
 
 func NewCedarWebSocketBuffReader(nc net.Conn) (*CedarWebSocketBuffReader, error) {
+	go func() {
+		if err := recover(); err != nil {
+			nc.Close()
+			log.Println(err)
+		}
+	}()
 	sbr := new(CedarWebSocketBuffReader)
 	goto again
 again:
