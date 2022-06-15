@@ -1,9 +1,14 @@
 package test
 
 import (
+	"fmt"
 	"log"
+	"math/rand"
 	"net/http"
+	"strconv"
+	"sync"
 	"testing"
+	"time"
 
 	uc "github.com/tungyao/ultimate-cedar"
 )
@@ -129,11 +134,13 @@ func TestEncryption(t *testing.T) {
 
 func TestWebsocket(t *testing.T) {
 	r := uc.NewRouter()
-	r.Debug()
+	// r.Debug()
 	// r.Debug()
 	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
-		uc.WebsocketSwitchProtocol(writer, request, "123", func(value *uc.CedarWebSocketBuffReader) {
-			log.Println(value)
+		n := rand.Intn(1000)
+		log.Println("rand number", n)
+		uc.WebsocketSwitchProtocol(writer, request, strconv.Itoa(n), func(value *uc.CedarWebSocketBuffReader) {
+			log.Println(string(value.Data))
 		})
 	})
 	r.Post("/ws/push", func(writer uc.ResponseWriter, request uc.Request) {
@@ -143,4 +150,65 @@ func TestWebsocket(t *testing.T) {
 		}
 	})
 	http.ListenAndServe(":8080", r)
+}
+
+var mux sync.Mutex
+
+func TestLock(t *testing.T) {
+	var key uint32
+	var wait sync.WaitGroup
+	wait.Add(1000)
+	for i := 0; i < 1000; i++ {
+		go func() {
+			mux.Lock()
+			defer mux.Unlock()
+			// atomic.AddUint32(&key, 1)
+			time.Sleep(time.Duration(rand.Intn(3)) * time.Second)
+			key += 1
+			fmt.Println(key)
+			wait.Done()
+		}()
+	}
+	wait.Wait()
+}
+
+// func TestHeapSort(t *testing.T) {
+// 	var arr = []int{1, 2, 124, 3, 2, 124, 341, 412, 5555}
+// 	heapsort(arr)
+// }
+// func heapsort(arr []int) {
+// 	length := len(arr)
+// 	buildMaxHeap(arr, length)
+// 	for i := 0; i < len(arr)-1; i++ {
+// 		swap(arr, 0, i)
+// 		length--
+// 		heapify(arr, 0, length)
+// 	}
+// 	log.Println(arr)
+// }
+// func buildMaxHeap(arr []int, arrLen int) {
+// 	for i := arrLen / 2; i >= 0; i-- {
+// 		heapify(arr, i, arrLen)
+// 	}
+// }
+// func heapify(arr []int, i int, leng int) {
+// 	left, right, largest := 2*i+1, 2*i+2, i
+// 	if left < leng && arr[left] > arr[largest] {
+// 		largest = left
+// 	}
+// 	if right < leng && arr[right] > arr[largest] {
+// 		largest = right
+// 	}
+// 	if largest != i {
+// 		arr[i], arr[largest] = arr[largest], arr[i]
+// 		heapify(arr, largest, leng)
+// 	}
+// }
+// func swap(arr []int, i int, j int) {
+//
+// }
+func TestArr(t *testing.T) {
+	var arr = []int{1, 2, 124, 3, 2, 124, 341, 412, 5555}
+	arr = arr[2:]
+	log.Println(arr)
 }

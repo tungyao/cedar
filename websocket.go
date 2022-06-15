@@ -8,13 +8,86 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	jsoniter "github.com/json-iterator/go"
 )
 
 const MagicWebsocketKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-var cedarWebsocketHub *sync.Map
+var cedarWebsocketHub = new(sync.Map)
+
+// MaxKeys 最多保持多少个key 超过这个的数量
+// 1. 最后访问时间最远的并且为空 将被移除掉
+// 2. 超过10天的key 也将被移除
+var MaxKeys uint64 = 2000
+
+var KeyPc uint64 = 0
+var MaxKeysMapping = make([]*KV, MaxKeys)
+var mux sync.Mutex
+
+type KV struct {
+	Key        int
+	Value      int64
+	KeyOutside string
+}
+
+func (t *tree) SetWebsocketMaxKey(n uint64) {
+	MaxKeys = n
+}
+
+// MaxKeysSaveOrDelete 感觉是每次都触发
+// 加锁和不加锁 会导致什么结果呢
+func MaxKeysSaveOrDelete(key string) {
+	mux.Lock()
+	defer mux.Unlock()
+	var isNotInMapping bool = true
+	for _, kv := range MaxKeysMapping {
+		if kv != nil && kv.KeyOutside == key {
+			isNotInMapping = false
+		}
+	}
+	if KeyPc >= MaxKeys && isNotInMapping {
+		// 查找并移除
+		// 排序后 得到时间最长的几组数据
+		MaxKeysMapping = HeapSortSpecial(MaxKeysMapping)
+		// 建立最大堆 ，首次进行填满 层数为4层
+		var n = 1
+		var now = time.Now().Unix()
+		var day10 int64 = 3600 * 24 * 10
+		for i := 0; i < len(MaxKeysMapping); i++ {
+			if (now - MaxKeysMapping[i].Value) > day10 {
+				n = i
+			}
+		}
+		if n == 0 {
+			n = 1
+		}
+		for _, kv := range MaxKeysMapping[:n] {
+			cedarWebsocketHub.Delete(kv.KeyOutside)
+		}
+		MaxKeysMapping = MaxKeysMapping[n:]
+		MaxKeysMapping = append(MaxKeysMapping, &KV{
+			Key:        len(MaxKeysMapping) + 1,
+			Value:      time.Now().Unix(),
+			KeyOutside: key,
+		})
+		atomic.StoreUint64(&KeyPc, uint64(KeyPc-uint64(n)+1))
+	} else {
+		for i, kv := range MaxKeysMapping {
+			if kv == nil {
+				atomic.AddUint64(&KeyPc, 1)
+				MaxKeysMapping[i] = &KV{
+					Key:        i,
+					Value:      time.Now().Unix(),
+					KeyOutside: key,
+				}
+				break
+			}
+		}
+	}
+}
 
 // WebsocketSwitchProtocol
 // 用来扩展websocket
@@ -26,10 +99,8 @@ var cedarWebsocketHub *sync.Map
 // Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 // Sec-WebSocket-Version: 13
 func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader)) {
+	MaxKeysSaveOrDelete(key)
 	// 申请一个map
-	if cedarWebsocketHub == nil {
-		cedarWebsocketHub = &sync.Map{}
-	}
 	version := r.Header.Get("Sec-Websocket-Version")
 	if debug {
 		log.Println("[cedar] websocket version", version)
@@ -59,7 +130,6 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		log.Panicln(err)
 	}
 	room, ok := cedarWebsocketHub.Load(key)
-	log.Println(room, ok)
 	if !ok {
 		room2 := make(map[string]net.Conn)
 		room2[nc.RemoteAddr().String()] = nc
