@@ -122,6 +122,8 @@ func TestRouter(t *testing.T) {
 
 func TestEncryption(t *testing.T) {
 	r := uc.NewRouter()
+	r.SetWebsocketModel(uc.OnlyPush)
+	log.Println(uc.OnlyPush, uc.ReadPush)
 	r.Get("en", func(writer uc.ResponseWriter, request uc.Request) {
 		writer.Data("hello world").Encode("F431jiyr3e0ag3wiAygjjTur0fh84sLr").Send()
 	})

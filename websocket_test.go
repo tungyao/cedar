@@ -1,7 +1,6 @@
 package ultimate_cedar
 
 import (
-	"log"
 	"net/http"
 	"testing"
 )
@@ -10,10 +9,11 @@ import (
 // READ 913 byte 10次 并发下表现良好
 func Test_switchProtocol(t *testing.T) {
 	r := NewRouter()
-	// r.Debug()
+	r.Debug()
+	r.SetWebsocketModel(OnlyPush)
 	r.Get("/ws", func(writer ResponseWriter, request Request) {
 		WebsocketSwitchProtocol(writer, request, "123", func(value *CedarWebSocketBuffReader) {
-			log.Println(string(value.Data))
+			// log.Println(string(value.Data))
 		})
 	})
 	r.Post("/ws/push", func(writer ResponseWriter, request Request) {

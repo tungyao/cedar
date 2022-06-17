@@ -37,6 +37,18 @@ func (t *tree) SetWebsocketMaxKey(n uint64) {
 	MaxKeys = n
 }
 
+const (
+	OnlyPush = iota
+	ReadPush
+)
+
+var bootModel int = ReadPush
+
+// SetWebsocketModel default it can read and push
+func (t *tree) SetWebsocketModel(model int) {
+	bootModel = model
+}
+
 // MaxKeysSaveOrDelete 感觉是每次都触发
 // 加锁和不加锁 会导致什么结果呢
 func MaxKeysSaveOrDelete(key string) {
@@ -199,10 +211,13 @@ func socketReplay(op int, data []byte) []byte {
 func WebsocketSwitchPush(key string, op int, data []byte) error {
 	if nc, ok := cedarWebsocketHub.Load(key); ok {
 		for _, conn := range nc.(map[string]net.Conn) {
-			_, err := conn.Write(socketReplay(op, data))
-			if err != nil {
-				return err
-			}
+			con := conn
+			go func(conn *net.Conn) {
+				_, err := (*conn).Write(socketReplay(op, data))
+				if err != nil {
+					log.Println(err)
+				}
+			}(&con)
 		}
 		return nil
 	} else {
@@ -252,6 +267,17 @@ again:
 		log.Println("[cedar] websocket FIN", fin)
 	}
 	opcode := header[0] & 0x0f
+	if bootModel == OnlyPush {
+		switch opcode {
+		case 0x8:
+			return nil, fmt.Errorf("client close")
+		case 0x9:
+			socketReplay(0xA, []byte("pong"))
+			return nil, nil
+		default:
+			return nil, nil
+		}
+	}
 	// replay opcode for ping
 	switch opcode {
 	case 0x8:
