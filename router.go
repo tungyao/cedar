@@ -1,4 +1,4 @@
-package cedar
+package ultimate_cedar
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"crypto/cipher"
 	"encoding/base64"
 	"fmt"
-	json "github.com/json-iterator/go"
 	"io"
 	"log"
 	"net/http"
@@ -15,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/json-iterator/go"
 )
 
 // 在想能不能借助数组来存放路由
@@ -25,6 +26,9 @@ import (
 
 // HandlerFunc Handler 对原来的方法进行重写
 type HandlerFunc func(ResponseWriter, Request)
+type Context struct {
+	context.Context
+}
 type ResponseWriter struct {
 	http.ResponseWriter
 	*Json
@@ -32,8 +36,13 @@ type ResponseWriter struct {
 type Request struct {
 	*http.Request
 	*en
-	Query *qu
-	Data  *data
+	Query   *qu
+	Data    *data
+	Context Context
+}
+
+func (c *Context) Set(key, val any) {
+	c.Context = context.WithValue(c.Context, key, val)
 }
 
 type pData struct {
@@ -59,11 +68,10 @@ func (_d *data) set(key, value string) {
 }
 
 type en struct {
-	r   *http.Request
-	ctx context.Context
+	r *http.Request
 }
 
-func (e *en) Decode(any interface{}) ([]byte, error) {
+func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 	b, err := io.ReadAll(e.r.Body)
 	defer e.r.Body.Close()
 	if err != nil {
@@ -80,7 +88,7 @@ func (e *en) Decode(any interface{}) ([]byte, error) {
 
 		}
 		if tp := reflect.TypeOf(any).Elem().Kind(); tp == reflect.Map || tp == reflect.Struct {
-			return dsk, json.Unmarshal(dsk, any)
+			return dsk, jsoniter.Unmarshal(dsk, any)
 		}
 		return dsk, nil
 	}
@@ -88,9 +96,15 @@ func (e *en) Decode(any interface{}) ([]byte, error) {
 		return b, nil
 
 	}
-	return b, json.Unmarshal(b, any)
+	return b, jsoniter.Unmarshal(b, any)
 }
-
+func (e *en) Decode(key string, byt []byte) ([]byte, error) {
+	dsk, err := base64.StdEncoding.DecodeString(string(byt))
+	if err != nil {
+		return nil, err
+	}
+	return AesDecryptCBC(dsk, []byte(key))
+}
 func (j *Json) Encode(key string) *Json {
 	j.header["tyrant"] = key
 	by, err := AesEncryptCBC(j.data, []byte(key))
@@ -156,6 +170,11 @@ func (q *qu) Check(params ...string) (*pData, error) {
 	return q.data, nil
 }
 
+// Get get query params from url
+func (q *qu) Get(key string) string {
+	return q.r.URL.Query().Get(key)
+}
+
 type Json struct {
 	writer http.ResponseWriter
 	header map[string]string
@@ -191,7 +210,7 @@ func (j *Json) Data(any interface{}) *Json {
 		j.data = j.t.template[0](any.(error))
 		return j
 	}
-	b, err := json.Marshal(any)
+	b, err := jsoniter.Marshal(any)
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -263,7 +282,7 @@ func (t *tree) Post(path string, handler HandlerFunc, chain ...MiddlewareChain) 
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -274,7 +293,7 @@ func (t *tree) Delete(path string, handler HandlerFunc, chain ...MiddlewareChain
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -285,7 +304,7 @@ func (t *tree) Head(path string, handler HandlerFunc, chain ...MiddlewareChain) 
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -296,7 +315,7 @@ func (t *tree) Options(path string, handler HandlerFunc, chain ...MiddlewareChai
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -307,7 +326,7 @@ func (t *tree) Put(path string, handler HandlerFunc, chain ...MiddlewareChain) {
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -318,7 +337,7 @@ func (t *tree) Patch(path string, handler HandlerFunc, chain ...MiddlewareChain)
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -329,7 +348,7 @@ func (t *tree) Trace(path string, handler HandlerFunc, chain ...MiddlewareChain)
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
@@ -340,7 +359,7 @@ func (t *tree) Connect(path string, handler HandlerFunc, chain ...MiddlewareChai
 	var newChain MiddlewareChain
 	if len(chain) > 0 {
 		newChain = make(MiddlewareChain, 0)
-		for i := 0; i < len(newChain); i++ {
+		for i := 0; i < len(chain); i++ {
 			newChain = append(newChain, chain[i]...)
 		}
 	}
