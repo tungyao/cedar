@@ -3,6 +3,7 @@ package ultimate_cedar
 import (
 	"bufio"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -10,8 +11,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-
-	jsoniter "github.com/json-iterator/go"
 )
 
 const MagicWebsocketKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
@@ -362,5 +361,5 @@ func (sbr *CedarWebSocketBuffReader) Scan(v interface{}) error {
 	if sbr.Length == 0 {
 		return fmt.Errorf("data length is zero")
 	}
-	return jsoniter.Unmarshal(sbr.Data, v)
+	return json.Unmarshal(sbr.Data, v)
 }

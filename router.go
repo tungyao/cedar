@@ -6,6 +6,7 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -14,8 +15,6 @@ import (
 	"strconv"
 	"strings"
 	"sync"
-
-	"github.com/json-iterator/go"
 )
 
 // 在想能不能借助数组来存放路由
@@ -88,7 +87,7 @@ func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 
 		}
 		if tp := reflect.TypeOf(any).Elem().Kind(); tp == reflect.Map || tp == reflect.Struct {
-			return dsk, jsoniter.Unmarshal(dsk, any)
+			return dsk, json.Unmarshal(dsk, any)
 		}
 		return dsk, nil
 	}
@@ -96,7 +95,7 @@ func (e *en) DecodeBody(any interface{}) ([]byte, error) {
 		return b, nil
 
 	}
-	return b, jsoniter.Unmarshal(b, any)
+	return b, json.Unmarshal(b, any)
 }
 func (e *en) Decode(key string, byt []byte) ([]byte, error) {
 	dsk, err := base64.StdEncoding.DecodeString(string(byt))
@@ -210,7 +209,7 @@ func (j *Json) Data(any interface{}) *Json {
 		j.data = j.t.template[0](any.(error))
 		return j
 	}
-	b, err := jsoniter.Marshal(any)
+	b, err := json.Marshal(any)
 	if err != nil {
 		log.Panicln(err)
 	}
