@@ -91,7 +91,6 @@ func TestRouter(t *testing.T) {
 	// test new middleware for group
 	r.Group("new_middle", func(groups *uc.Groups) {
 		groups.Get("echo", func(writer uc.ResponseWriter, request uc.Request) {
-
 			// add context
 			log.Println(request.Context.Value("member"))
 			writer.Data("hello new_middle echo").Send()
