@@ -100,6 +100,8 @@ func MaxKeysSaveOrDelete(key string) {
 	}
 }
 
+var pointer uint64 = 0
+
 // WebsocketSwitchProtocol
 // 用来扩展websocket
 // 只实现了保持在线和推送
@@ -138,7 +140,11 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	}
 	nc, _, err := hj.Hijack()
 	if err != nil {
-		log.Panicln(err)
+		log.Println(err)
+		return
+	}
+	for !atomic.CompareAndSwapUint64(&pointer, 0, 1) {
+		time.Sleep(time.Millisecond * 10)
 	}
 	room, ok := cedarWebsocketHub.Load(key)
 	if !ok {
@@ -148,6 +154,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		room = room2
 	}
 	room.(map[string]net.Conn)[nc.RemoteAddr().String()] = nc
+	atomic.CompareAndSwapUint64(&pointer, 1, 0)
 	// cedarWebsocketHub.Store(key, nc)
 	go func(nc net.Conn) {
 		closeHj := make(chan bool)
