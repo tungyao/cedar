@@ -2,6 +2,7 @@ package ultimate_cedar
 
 import (
 	"bufio"
+	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -102,6 +103,11 @@ func MaxKeysSaveOrDelete(key string) {
 
 var pointer uint64 = 0
 
+type RoomMap struct {
+	sync.RWMutex
+	Map map[string]net.Conn
+}
+
 // WebsocketSwitchProtocol
 // 用来扩展websocket
 // 只实现了保持在线和推送
@@ -148,18 +154,20 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	}
 	room, ok := cedarWebsocketHub.Load(key)
 	if !ok {
-		room2 := make(map[string]net.Conn)
-		room2[nc.RemoteAddr().String()] = nc
+		room2 := &RoomMap{}
+		room2.Map = make(map[string]net.Conn)
+		room2.Map[nc.RemoteAddr().String()] = nc
 		cedarWebsocketHub.Store(key, room2)
 		room = room2
 	}
-	room.(map[string]net.Conn)[nc.RemoteAddr().String()] = nc
+	room.(*RoomMap).Map[nc.RemoteAddr().String()] = nc
 	atomic.CompareAndSwapUint64(&pointer, 1, 0)
 	// cedarWebsocketHub.Store(key, nc)
-	go func(nc net.Conn) {
+	go func(nc net.Conn, room *RoomMap) {
 		closeHj := make(chan bool)
+		ctx, cancel := context.WithCancel(context.Background())
 		for {
-			cwb, err := NewCedarWebSocketBuffReader(nc)
+			cwb, err := NewCedarWebSocketBuffReader(ctx, nc)
 			if err != nil {
 				if debug {
 					log.Println("[cedar] websocket", err)
@@ -171,13 +179,16 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		if debug {
 			log.Println("[cedar] websocket close channel")
 		}
+		room.Lock()
 		nc.Close()
+		cancel()
 		close(closeHj)
-		delete(room.(map[string]net.Conn), nc.RemoteAddr().String())
+		room.Unlock()
+		delete(room.Map, nc.RemoteAddr().String())
 		if debug {
 			log.Println("[cedar] websocket disconnect")
 		}
-	}(nc)
+	}(nc, room.(*RoomMap))
 }
 
 func socketReplay(op int, data []byte) []byte {
@@ -250,12 +261,12 @@ type CedarWebSocketBuffReader struct {
 	cedarWebsocketBuffScan
 }
 
-func NewCedarWebSocketBuffReader(nc net.Conn) (*CedarWebSocketBuffReader, error) {
-	go func() {
-		if err := recover(); err != nil {
-			log.Println("[cedar] websocket recover error", err)
-		}
-	}()
+func NewCedarWebSocketBuffReader(ctx context.Context, nc net.Conn) (*CedarWebSocketBuffReader, error) {
+	// go func() {
+	// 	if err := recover(); err != nil {
+	// 		log.Println("[cedar] websocket recover error", err)
+	// 	}
+	// }()
 	sbr := new(CedarWebSocketBuffReader)
 	goto again
 again:
@@ -265,7 +276,7 @@ again:
 	// First byte. FIN/RSV1/RSV2/RSV3/OpCode(4bits)
 	b, err := buf.ReadByte()
 	if err != nil {
-		return nil, err
+		return sbr, err
 	}
 	header = append(header, b)
 	fin := (header[0]>>7)&1 != 0
@@ -276,21 +287,21 @@ again:
 	if bootModel == OnlyPush {
 		switch opcode {
 		case 0x8:
-			return nil, fmt.Errorf("client close")
+			return sbr, fmt.Errorf("client close")
 		case 0x9:
 			socketReplay(0xA, []byte("pong"))
-			return nil, nil
+			return sbr, nil
 		default:
-			return nil, nil
+			return sbr, nil
 		}
 	}
 	// replay opcode for ping
 	switch opcode {
 	case 0x8:
-		return nil, fmt.Errorf("client close")
+		return sbr, fmt.Errorf("client close")
 	case 0x9:
 		socketReplay(0xA, []byte("pong"))
-		return nil, nil
+		return sbr, nil
 	}
 	if debug {
 		log.Println("[cedar] websocket OPCODE", opcode)
@@ -298,7 +309,7 @@ again:
 	// Second byte. Mask/Payload len(7bits)
 	b, err = buf.ReadByte()
 	if err != nil {
-		return nil, err
+		return sbr, err
 	}
 	header = append(header, b)
 	mask := (b & 0x80) != 0
@@ -333,7 +344,7 @@ again:
 		for i := 0; i < 4; i++ {
 			b, err = buf.ReadByte()
 			if err != nil {
-				return nil, err
+				return sbr, err
 			}
 			header = append(header, b)
 			maskKey = append(maskKey, b)
