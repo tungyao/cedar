@@ -2,7 +2,6 @@ package ultimate_cedar
 
 import (
 	"bufio"
-	"context"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -165,9 +164,8 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	// cedarWebsocketHub.Store(key, nc)
 	go func(nc net.Conn, room *RoomMap) {
 		closeHj := make(chan bool)
-		ctx, cancel := context.WithCancel(context.Background())
 		for {
-			cwb, err := NewCedarWebSocketBuffReader(ctx, nc)
+			cwb, err := NewCedarWebSocketBuffReader(nc)
 			if err != nil {
 				if debug {
 					log.Println("[cedar] websocket", err)
@@ -181,7 +179,6 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		}
 		room.Lock()
 		nc.Close()
-		cancel()
 		close(closeHj)
 		room.Unlock()
 		delete(room.Map, nc.RemoteAddr().String())
@@ -261,7 +258,7 @@ type CedarWebSocketBuffReader struct {
 	cedarWebsocketBuffScan
 }
 
-func NewCedarWebSocketBuffReader(ctx context.Context, nc net.Conn) (*CedarWebSocketBuffReader, error) {
+func NewCedarWebSocketBuffReader(nc net.Conn) (*CedarWebSocketBuffReader, error) {
 	// go func() {
 	// 	if err := recover(); err != nil {
 	// 		log.Println("[cedar] websocket recover error", err)
