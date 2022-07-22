@@ -42,7 +42,7 @@ const (
 )
 
 var bootModel int = ReadPush
-var constKey uint64 = 0
+var pointer uint64 = 0
 
 // SetWebsocketModel default it can read and push
 func (t *tree) SetWebsocketModel(model int) {
@@ -141,7 +141,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	if err != nil {
 		log.Panicln(err)
 	}
-	for !atomic.CompareAndSwapUint64(&constKey, 0, 1) {
+	for !atomic.CompareAndSwapUint64(&pointer, 0, 1) {
 		time.Sleep(time.Millisecond * 10)
 	}
 	room, ok := cedarWebsocketHub.Load(key)
@@ -152,7 +152,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		room = room2
 	}
 	room.(map[string]net.Conn)[nc.RemoteAddr().String()] = nc
-	atomic.CompareAndSwapUint64(&constKey, 1, 0)
+	atomic.CompareAndSwapUint64(&pointer, 1, 0)
 	// cedarWebsocketHub.Store(key, nc)
 	go func(nc net.Conn) {
 		closeHj := make(chan bool)
