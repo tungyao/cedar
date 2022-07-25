@@ -11,6 +11,11 @@
     ws.onmessage = function (e) {
         console.log(e);
     }
+    ws.onopen = function (){
+        setInterval( ()=>{
+            ws.send(`{"seq":"123"}`)
+        },1000)
+    }
 </script>
 </body>
 </html>

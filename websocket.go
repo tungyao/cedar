@@ -15,7 +15,7 @@ import (
 
 const MagicWebsocketKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
-var cedarWebsocketHub = new(sync.Map)
+var cedarWebsocketHub = make(map[string]*RoomMap)
 
 // MaxKeys 最多保持多少个key 超过这个的数量
 // 1. 最后访问时间最远的并且为空 将被移除掉
@@ -24,7 +24,7 @@ var MaxKeys uint64 = 2000
 
 var KeyPc uint64 = 0
 var MaxKeysMapping = make([]*KV, MaxKeys)
-var mux sync.Mutex
+var mux sync.RWMutex
 
 type KV struct {
 	Key        int
@@ -76,7 +76,7 @@ func MaxKeysSaveOrDelete(key string) {
 			n = 1
 		}
 		for _, kv := range MaxKeysMapping[:n] {
-			cedarWebsocketHub.Delete(kv.KeyOutside)
+			delete(cedarWebsocketHub, kv.KeyOutside)
 		}
 		MaxKeysMapping = MaxKeysMapping[n:]
 		MaxKeysMapping = append(MaxKeysMapping, &KV{
@@ -107,6 +107,16 @@ type RoomMap struct {
 	Map map[string]net.Conn
 }
 
+type CedarWebsocketWriter struct {
+	conn net.Conn
+	sync.Mutex
+}
+
+func (w *CedarWebsocketWriter) Write(data []byte) error {
+	_, err := w.conn.Write(socketReplay(0x1, data))
+	return err
+}
+
 // WebsocketSwitchProtocol
 // 用来扩展websocket
 // 只实现了保持在线和推送
@@ -116,7 +126,7 @@ type RoomMap struct {
 // Connection: Upgrade
 // Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 // Sec-WebSocket-Version: 13
-func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader)) {
+func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
 	MaxKeysSaveOrDelete(key)
 	// 申请一个map
 	version := r.Header.Get("Sec-Websocket-Version")
@@ -148,42 +158,50 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		log.Println(err)
 		return
 	}
-	room, ok := cedarWebsocketHub.Load(key)
-	if !ok {
-		room2 := &RoomMap{}
-		room2.Map = make(map[string]net.Conn)
-		room2.Map[nc.RemoteAddr().String()] = nc
-		cedarWebsocketHub.Store(key, room2)
-		room = room2
-	}
-	room.(*RoomMap).RLock()
-	room.(*RoomMap).Map[nc.RemoteAddr().String()] = nc
-	room.(*RoomMap).Unlock()
-	// cedarWebsocketHub.Store(key, nc)
-	go func(nc net.Conn, room *RoomMap) {
-		closeHj := make(chan bool)
-		for {
-			cwb, err := NewCedarWebSocketBuffReader(nc)
-			if err != nil {
-				if debug {
-					log.Println("[cedar] websocket", err)
-				}
-				break
+	mux.Lock()
+	room := cedarWebsocketHub[key]
+	// cedarWebsocketHub.Load(key)
+	if room == nil {
+		room := &RoomMap{}
+
+		room.Map = make(map[string]net.Conn)
+		room.Map[nc.RemoteAddr().String()] = nc
+		// cedarWebsocketHub.Store(key, room2)
+		cedarWebsocketHub[key] = room
+	} else {
+		room.Map[nc.RemoteAddr().String()] = nc
+		go func(nc net.Conn, room *RoomMap) {
+			closeHj := make(chan bool)
+			writer := &CedarWebsocketWriter{
+				conn:  nc,
+				Mutex: sync.Mutex{},
 			}
-			fn(cwb)
-		}
-		if debug {
-			log.Println("[cedar] websocket close channel")
-		}
-		room.Lock()
-		nc.Close()
-		close(closeHj)
-		delete(room.Map, nc.RemoteAddr().String())
-		room.Unlock()
-		if debug {
-			log.Println("[cedar] websocket disconnect")
-		}
-	}(nc, room.(*RoomMap))
+			for {
+				cwb, err := NewCedarWebSocketBuffReader(nc)
+				if err != nil {
+					if debug {
+						log.Println("[cedar] websocket", err)
+					}
+					break
+				}
+				fn(cwb, writer)
+			}
+			if debug {
+				log.Println("[cedar] websocket close channel")
+			}
+			room.Lock()
+			nc.Close()
+			close(closeHj)
+			delete(room.Map, nc.RemoteAddr().String())
+			room.Unlock()
+			if debug {
+				log.Println("[cedar] websocket disconnect")
+			}
+		}(nc, room)
+
+	}
+	mux.Unlock()
+	// cedarWebsocketHub.Store(key, nc)
 }
 
 func socketReplay(op int, data []byte) []byte {
@@ -221,15 +239,16 @@ func socketReplay(op int, data []byte) []byte {
 }
 
 func WebsocketSwitchPush(key string, op int, data []byte) error {
-	if nc, ok := cedarWebsocketHub.Load(key); ok {
-		for _, conn := range nc.(map[string]net.Conn) {
-			con := conn
-			go func(conn *net.Conn) {
-				_, err := (*conn).Write(socketReplay(op, data))
-				if err != nil {
-					log.Println(err)
-				}
-			}(&con)
+	mux.RLock()
+	defer mux.RUnlock()
+	if nc, ok := cedarWebsocketHub[key]; ok {
+		nc.RLock()
+		defer nc.RUnlock()
+		for _, conn := range nc.Map {
+			_, err := conn.Write(socketReplay(op, data))
+			if err != nil {
+				log.Println(err)
+			}
 		}
 		return nil
 	} else {
