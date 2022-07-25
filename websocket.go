@@ -148,9 +148,6 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		log.Println(err)
 		return
 	}
-	for !atomic.CompareAndSwapUint64(&pointer, 0, 1) {
-		time.Sleep(time.Millisecond * 10)
-	}
 	room, ok := cedarWebsocketHub.Load(key)
 	if !ok {
 		room2 := &RoomMap{}
@@ -159,8 +156,9 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		cedarWebsocketHub.Store(key, room2)
 		room = room2
 	}
+	room.(*RoomMap).RLock()
 	room.(*RoomMap).Map[nc.RemoteAddr().String()] = nc
-	atomic.CompareAndSwapUint64(&pointer, 1, 0)
+	room.(*RoomMap).Unlock()
 	// cedarWebsocketHub.Store(key, nc)
 	go func(nc net.Conn, room *RoomMap) {
 		closeHj := make(chan bool)
@@ -180,8 +178,8 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		room.Lock()
 		nc.Close()
 		close(closeHj)
-		room.Unlock()
 		delete(room.Map, nc.RemoteAddr().String())
+		room.Unlock()
 		if debug {
 			log.Println("[cedar] websocket disconnect")
 		}
