@@ -1,8 +1,6 @@
 package ultimate_cedar
 
 import (
-	"encoding/json"
-	"fmt"
 	"net/http"
 	"testing"
 )
@@ -19,10 +17,10 @@ func Test_switchProtocol(t *testing.T) {
 	r.SetWebsocketModel(ReadPush)
 	r.Get("/ws", func(writer ResponseWriter, request Request) {
 		WebsocketSwitchProtocol(writer, request, "123", func(value *CedarWebSocketBuffReader, w *CedarWebsocketWriter) {
-			se := &SEQX{}
-			json.Unmarshal(value.Data, se)
+			// se := &SEQX{}
+			// json.Unmarshal(value.Data, se)
 			// log.Println(se)
-			w.Write([]byte(fmt.Sprintf(`{"seq":"1566276523281-585638","cmd":"heartbeat","response":{"code":200,"codeMsg":"Success","data":null}}`)))
+			// w.Write([]byte(fmt.Sprintf(`{"seq":"1566276523281-585638","cmd":"heartbeat","response":{"code":200,"codeMsg":"Success","data":null}}`)))
 			// WebsocketSwitchPush("123", 0x1, []byte(fmt.Sprintf(`{"seq":"%s"}`, se.Seq)))
 		})
 	})

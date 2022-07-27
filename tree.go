@@ -205,3 +205,14 @@ func (t *tree) Debug() {
 	os.Setenv("ultimate-cedar-debug", "yes")
 	debug = true
 }
+
+func (t *tree) Proxy(url ...*ProxyItem) {
+	for i := 0; i < len(url); i++ {
+		t.Get(url[i].Path, proxyFn(url[i]))
+		t.Post(url[i].Path, proxyFn(url[i]))
+		t.Post(url[i].Path, proxyFn(url[i]))
+		t.Options(url[i].Path, proxyFn(url[i]))
+		t.Delete(url[i].Path, proxyFn(url[i]))
+		t.Connect(url[i].Path, proxyFn(url[i]))
+	}
+}

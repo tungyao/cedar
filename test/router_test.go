@@ -140,7 +140,7 @@ func TestWebsocket(t *testing.T) {
 	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
 		n := rand.Intn(1000)
 		log.Println("rand number", n)
-		uc.WebsocketSwitchProtocol(writer, request, strconv.Itoa(n), func(value *uc.CedarWebSocketBuffReader) {
+		uc.WebsocketSwitchProtocol(writer, request, strconv.Itoa(n), func(value *uc.CedarWebSocketBuffReader, w *uc.CedarWebsocketWriter) {
 			log.Println(string(value.Data))
 		})
 	})
