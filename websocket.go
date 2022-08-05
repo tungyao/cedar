@@ -148,7 +148,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	if err != nil {
 		return
 	}
-	hj, ok := w.writer.(http.Hijacker)
+	hj, ok := w.ResponseWriter.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Not a Hijacker", 500)
 		return
@@ -163,47 +163,50 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	// cedarWebsocketHub.Load(key)
 	if room == nil {
 		room := &RoomMap{}
-
 		room.Map = make(map[string]net.Conn)
 		room.Map[nc.RemoteAddr().String()] = nc
 		// cedarWebsocketHub.Store(key, room2)
 		cedarWebsocketHub[key] = room
+		go DealLogic(nc, room, fn)
 	} else {
 		room.Map[nc.RemoteAddr().String()] = nc
-		go func(nc net.Conn, room *RoomMap) {
-			closeHj := make(chan bool)
-			writer := &CedarWebsocketWriter{
-				conn:  nc,
-				Mutex: sync.Mutex{},
-			}
-			for {
-				cwb, err := NewCedarWebSocketBuffReader(nc)
-				if err != nil {
-					if debug {
-						log.Println("[cedar] websocket", err)
-					}
-					break
-				}
-				fn(cwb, writer)
-			}
-			if debug {
-				log.Println("[cedar] websocket close channel")
-			}
-			room.Lock()
-			nc.Close()
-			close(closeHj)
-			delete(room.Map, nc.RemoteAddr().String())
-			room.Unlock()
-			if debug {
-				log.Println("[cedar] websocket disconnect")
-			}
-		}(nc, room)
-
+		go DealLogic(nc, room, fn)
 	}
 	mux.Unlock()
 	// cedarWebsocketHub.Store(key, nc)
 }
+func DealLogic(nc net.Conn, room *RoomMap, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
 
+	closeHj := make(chan bool)
+	writer := &CedarWebsocketWriter{
+		conn:  nc,
+		Mutex: sync.Mutex{},
+	}
+	for {
+		cwb, err := NewCedarWebSocketBuffReader(nc)
+		if err != nil {
+			if debug {
+				log.Println("[cedar] websocket", err)
+			}
+			break
+		}
+		fn(cwb, writer)
+	}
+	if debug {
+		log.Println("[cedar] websocket close channel")
+	}
+	room.Lock()
+	nc.Close()
+	close(closeHj)
+	if _, ok := room.Map[nc.RemoteAddr().String()]; ok {
+		delete(room.Map, nc.RemoteAddr().String())
+	}
+	room.Unlock()
+	if debug {
+		log.Println("[cedar] websocket disconnect")
+	}
+
+}
 func socketReplay(op int, data []byte) []byte {
 	var frame = make([]byte, 0)
 	bl := len(data)

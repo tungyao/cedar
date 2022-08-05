@@ -7,15 +7,18 @@
 <body>
 
 <script>
-    const ws = new WebSocket("ws://localhost:8080/ws?ak=123")
-    ws.onmessage = function (e) {
-        console.log(e);
-    }
-    ws.onopen = function (){
-        setInterval( ()=>{
-            ws.send(`{"seq":"123"}`)
-        },1000)
-    }
+    const ws = new WebSocket("ws://127.0.0.1:8080/ws?broadcast=123")
+    // ws.onmessage = function (e) {
+    //     console.log(e);
+    // }
+    // ws.onerror = function (e){
+    //     console.log(e);
+    // }
+    // ws.onopen = function (){
+    //     setInterval( ()=>{
+    //         ws.send(`{"seq":"123"}`)
+    //     },1000)
+    // }
 </script>
 </body>
 </html>
