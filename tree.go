@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"golang.org/x/time/rate"
 	"log"
 	"net/http"
 	"os"
@@ -204,4 +205,16 @@ func (t *tree) Debug() {
 	log.Println("cedar will into the debug mode")
 	os.Setenv("ultimate-cedar-debug", "yes")
 	debug = true
+}
+
+func (t *tree) Proxy(limit float64, url ...*ProxyItem) {
+	limiter := rate.NewLimiter(rate.Limit(limit), int(limit*10))
+	for i := 0; i < len(url); i++ {
+		t.Get(url[i].Path, proxyFn(url[i], limiter))
+		t.Post(url[i].Path, proxyFn(url[i], limiter))
+		t.Post(url[i].Path, proxyFn(url[i], limiter))
+		t.Options(url[i].Path, proxyFn(url[i], limiter))
+		t.Delete(url[i].Path, proxyFn(url[i], limiter))
+		t.Connect(url[i].Path, proxyFn(url[i], limiter))
+	}
 }
