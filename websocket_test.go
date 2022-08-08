@@ -13,17 +13,11 @@ type SEQX struct {
 // READ 913 byte 10次 并发下表现良好
 func Test_switchProtocol(t *testing.T) {
 	r := NewRouter()
-	//r.Debug()
+	r.Debug()
 	r.SetWebsocketModel(OnlyPush)
 	r.Get("/ws", func(writer ResponseWriter, request Request) {
-		WebsocketSwitchProtocol(writer, request, "123", func(value *CedarWebSocketBuffReader, w *CedarWebsocketWriter) {
-			// se := &SEQX{}
-			// json.Unmarshal(value.Data, se)
-			// log.Println(se)
-			//w.Write([]byte(fmt.Sprintf(`{"seq":"1566276523281-585638","cmd":"heartbeat","response":{"code":200,"codeMsg":"Success","data":null}}`)))
-			//WebsocketSwitchPush("123", 0x1, []byte(fmt.Sprintf(`{"seq":"%s"}`, se.Seq)))
-
-		})
+		//WebsocketSwitchProtocol(writer, request, "123", func(value *CedarWebSocketBuffReader, w *CedarWebsocketWriter) {})
+		WebsocketSwitchProtocol19(writer, request, "123", func(value *CedarWebSocketBuffReader, w *CedarWebsocketWriter) {})
 	})
 	r.Post("/ws/push", func(writer ResponseWriter, request Request) {
 		WebsocketSwitchPush("123", 0x1, []byte("hello world"))
