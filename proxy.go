@@ -76,7 +76,6 @@ func NewProxy(targetHost string) (*httputil.ReverseProxy, error) {
 			request.URL.RawQuery = targetQuery + "&" + request.URL.RawQuery
 		}
 		if _, ok := request.Header["User-Agent"]; !ok {
-			// explicitly disable User-Agent so it's not set to default value
 			request.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36")
 		}
 	}

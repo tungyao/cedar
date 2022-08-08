@@ -117,6 +117,50 @@ func (w *CedarWebsocketWriter) Write(data []byte) error {
 	return err
 }
 
+// WebsocketSwitchProtocol19 适配go1.19
+func WebsocketSwitchProtocol19(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
+	MaxKeysSaveOrDelete(key)
+	version := r.Header.Get("Sec-Websocket-Version")
+	if debug {
+		log.Println("[cedar] websocket version", version)
+	}
+	if version != "13" {
+		w.WriteHeader(400)
+		return
+	}
+	swKey := r.Header.Get("Sec-WebSocket-Key")
+	newKey := getNewKey(swKey)
+	hj, ok := w.ResponseWriter.(http.Hijacker)
+	if !ok {
+		log.Println(ok)
+		return
+	}
+	nc, _, err := hj.Hijack()
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	_, err = nc.Write([]byte(fmt.Sprintf("HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: %s\r\n\r\n", newKey)))
+	if err != nil {
+		log.Println(err)
+		return
+	}
+	mux.Lock()
+	room := cedarWebsocketHub[key]
+	if room == nil {
+		room := &RoomMap{}
+		room.Map = make(map[string]net.Conn)
+		room.Map[nc.RemoteAddr().String()] = nc
+		// cedarWebsocketHub.Store(key, room2)
+		cedarWebsocketHub[key] = room
+		go DealLogic(nc, room, fn)
+	} else {
+		room.Map[nc.RemoteAddr().String()] = nc
+		go DealLogic(nc, room, fn)
+	}
+	mux.Unlock()
+}
+
 // WebsocketSwitchProtocol
 // 用来扩展websocket
 // 只实现了保持在线和推送
@@ -126,6 +170,7 @@ func (w *CedarWebsocketWriter) Write(data []byte) error {
 // Connection: Upgrade
 // Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==
 // Sec-WebSocket-Version: 13
+// go1.19 之前使用
 func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
 	MaxKeysSaveOrDelete(key)
 	// 申请一个map
@@ -160,7 +205,6 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 	}
 	mux.Lock()
 	room := cedarWebsocketHub[key]
-	// cedarWebsocketHub.Load(key)
 	if room == nil {
 		room := &RoomMap{}
 		room.Map = make(map[string]net.Conn)
@@ -173,7 +217,7 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		go DealLogic(nc, room, fn)
 	}
 	mux.Unlock()
-	// cedarWebsocketHub.Store(key, nc)
+
 }
 func DealLogic(nc net.Conn, room *RoomMap, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
 
