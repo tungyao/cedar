@@ -5,7 +5,6 @@ import (
 	"log"
 	"math/rand"
 	"net/http"
-	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -140,12 +139,12 @@ func TestWebsocket(t *testing.T) {
 	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
 		n := rand.Intn(1000)
 		log.Println("rand number", n)
-		uc.WebsocketSwitchProtocol(writer, request, strconv.Itoa(n), func(value *uc.CedarWebSocketBuffReader, w *uc.CedarWebsocketWriter) {
+		uc.WebsocketSwitchProtocol19(writer, request, "123", func(value *uc.CedarWebSocketBuffReader, w *uc.CedarWebsocketWriter) {
 			log.Println(string(value.Data))
 		})
 	})
 	r.Post("/ws/push", func(writer uc.ResponseWriter, request uc.Request) {
-		err := uc.WebsocketSwitchPush("123", 0x1, []byte(`{"key":"123","data":"hello world"}`))
+		err := uc.WebsocketSwitchPush("123", request.Query.Get("mark"), 0x1, []byte(`{"key":"123","data":"hello world"}`))
 		if err != nil {
 			return
 		}
@@ -173,38 +172,42 @@ func TestLock(t *testing.T) {
 	wait.Wait()
 }
 
-// func TestHeapSort(t *testing.T) {
-// 	var arr = []int{1, 2, 124, 3, 2, 124, 341, 412, 5555}
-// 	heapsort(arr)
-// }
-// func heapsort(arr []int) {
-// 	length := len(arr)
-// 	buildMaxHeap(arr, length)
-// 	for i := 0; i < len(arr)-1; i++ {
-// 		swap(arr, 0, i)
-// 		length--
-// 		heapify(arr, 0, length)
-// 	}
-// 	log.Println(arr)
-// }
-// func buildMaxHeap(arr []int, arrLen int) {
-// 	for i := arrLen / 2; i >= 0; i-- {
-// 		heapify(arr, i, arrLen)
-// 	}
-// }
-// func heapify(arr []int, i int, leng int) {
-// 	left, right, largest := 2*i+1, 2*i+2, i
-// 	if left < leng && arr[left] > arr[largest] {
-// 		largest = left
-// 	}
-// 	if right < leng && arr[right] > arr[largest] {
-// 		largest = right
-// 	}
-// 	if largest != i {
-// 		arr[i], arr[largest] = arr[largest], arr[i]
-// 		heapify(arr, largest, leng)
-// 	}
-// }
+//	func TestHeapSort(t *testing.T) {
+//		var arr = []int{1, 2, 124, 3, 2, 124, 341, 412, 5555}
+//		heapsort(arr)
+//	}
+//
+//	func heapsort(arr []int) {
+//		length := len(arr)
+//		buildMaxHeap(arr, length)
+//		for i := 0; i < len(arr)-1; i++ {
+//			swap(arr, 0, i)
+//			length--
+//			heapify(arr, 0, length)
+//		}
+//		log.Println(arr)
+//	}
+//
+//	func buildMaxHeap(arr []int, arrLen int) {
+//		for i := arrLen / 2; i >= 0; i-- {
+//			heapify(arr, i, arrLen)
+//		}
+//	}
+//
+//	func heapify(arr []int, i int, leng int) {
+//		left, right, largest := 2*i+1, 2*i+2, i
+//		if left < leng && arr[left] > arr[largest] {
+//			largest = left
+//		}
+//		if right < leng && arr[right] > arr[largest] {
+//			largest = right
+//		}
+//		if largest != i {
+//			arr[i], arr[largest] = arr[largest], arr[i]
+//			heapify(arr, largest, leng)
+//		}
+//	}
+//
 // func swap(arr []int, i int, j int) {
 //
 // }

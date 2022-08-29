@@ -16,6 +16,7 @@ import (
 const MagicWebsocketKey = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
 
 var cedarWebsocketHub = make(map[string]*RoomMap)
+var cedarWebsocketSingle = new(RoomMapSingle)
 
 // MaxKeys 最多保持多少个key 超过这个的数量
 // 1. 最后访问时间最远的并且为空 将被移除掉
@@ -46,6 +47,9 @@ var bootModel int = ReadPush
 // SetWebsocketModel default it can read and push
 func (t *tree) SetWebsocketModel(model int) {
 	bootModel = model
+}
+func init() {
+	cedarWebsocketSingle.Map = make(map[string]string)
 }
 
 // MaxKeysSaveOrDelete 感觉是每次都触发
@@ -106,7 +110,10 @@ type RoomMap struct {
 	sync.RWMutex
 	Map map[string]net.Conn
 }
-
+type RoomMapSingle struct {
+	sync.RWMutex
+	Map map[string]string
+}
 type CedarWebsocketWriter struct {
 	conn net.Conn
 	sync.Mutex
@@ -145,6 +152,14 @@ func WebsocketSwitchProtocol19(w ResponseWriter, r Request, key string, fn func(
 		log.Println(err)
 		return
 	}
+
+	// 单个长链接服务
+	if r.Query.Get("type") == "single" {
+		cedarWebsocketSingle.Lock()
+		cedarWebsocketSingle.Map[r.Query.Get("mark")] = nc.RemoteAddr().String()
+		cedarWebsocketSingle.Unlock()
+	}
+
 	mux.Lock()
 	room := cedarWebsocketHub[key]
 	if room == nil {
@@ -203,13 +218,18 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		log.Println(err)
 		return
 	}
+	// 单个长链接服务
+	if r.Query.Get("type") == "single" {
+		cedarWebsocketSingle.Lock()
+		cedarWebsocketSingle.Map[r.Query.Get("mark")] = nc.RemoteAddr().String()
+		cedarWebsocketSingle.Unlock()
+	}
 	mux.Lock()
 	room := cedarWebsocketHub[key]
 	if room == nil {
 		room := &RoomMap{}
 		room.Map = make(map[string]net.Conn)
 		room.Map[nc.RemoteAddr().String()] = nc
-		// cedarWebsocketHub.Store(key, room2)
 		cedarWebsocketHub[key] = room
 		go DealLogic(nc, room, fn)
 	} else {
@@ -246,6 +266,11 @@ func DealLogic(nc net.Conn, room *RoomMap, fn func(value *CedarWebSocketBuffRead
 		delete(room.Map, nc.RemoteAddr().String())
 	}
 	room.Unlock()
+	cedarWebsocketSingle.Lock()
+	if _, ok := cedarWebsocketSingle.Map[nc.RemoteAddr().String()]; ok {
+		delete(cedarWebsocketSingle.Map, nc.RemoteAddr().String())
+	}
+	cedarWebsocketSingle.Unlock()
 	if debug {
 		log.Println("[cedar] websocket disconnect")
 	}
@@ -285,12 +310,27 @@ func socketReplay(op int, data []byte) []byte {
 	return frame
 }
 
-func WebsocketSwitchPush(key string, op int, data []byte) error {
+func WebsocketSwitchPush(key string, mark string, op int, data []byte) error {
+	// 单条推送
 	mux.RLock()
 	defer mux.RUnlock()
 	if nc, ok := cedarWebsocketHub[key]; ok {
 		nc.RLock()
 		defer nc.RUnlock()
+		if mark != "" {
+			cedarWebsocketSingle.RLock()
+			if v, ok := cedarWebsocketSingle.Map[mark]; ok {
+				if ncx, ok := nc.Map[v]; ok {
+					ncx.Write(socketReplay(op, data))
+				} else {
+					return fmt.Errorf("not find this sigle key %s", key)
+				}
+			} else {
+				return fmt.Errorf("not find this key %s", key)
+			}
+			cedarWebsocketSingle.RUnlock()
+			return nil
+		}
 		for _, conn := range nc.Map {
 			_, err := conn.Write(socketReplay(op, data))
 			if err != nil {

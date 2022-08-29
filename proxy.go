@@ -16,7 +16,7 @@ import (
 type ProxyItem struct {
 	Path     string
 	Url      string
-	Cache    bool
+	Cache    bool  // 对结果进行缓存 缓存规则是 客户端主动拉取缓存 服务器端主动推送缓存内容
 	MaxLimit int64 // 每秒多少次请求 触发缓存的使用
 }
 
