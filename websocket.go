@@ -319,6 +319,7 @@ func WebsocketSwitchPush(key string, mark string, op int, data []byte) error {
 		defer nc.RUnlock()
 		if mark != "" {
 			cedarWebsocketSingle.RLock()
+			defer cedarWebsocketSingle.RUnlock()
 			if v, ok := cedarWebsocketSingle.Map[mark]; ok {
 				if ncx, ok := nc.Map[v]; ok {
 					ncx.Write(socketReplay(op, data))
@@ -328,7 +329,6 @@ func WebsocketSwitchPush(key string, mark string, op int, data []byte) error {
 			} else {
 				return fmt.Errorf("not find this key %s", key)
 			}
-			cedarWebsocketSingle.RUnlock()
 			return nil
 		}
 		for _, conn := range nc.Map {
