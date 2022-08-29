@@ -7,7 +7,7 @@
 <body>
 
 <script>
-    const ws = new WebSocket("ws://127.0.0.1:8080/ws?broadcast=123&type=single&mark=1231234")
+    const ws = new WebSocket("ws://127.0.0.1:8080/ws?broadcast=123")
     ws.onmessage = function (e) {
         console.log(e);
     }
