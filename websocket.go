@@ -152,11 +152,11 @@ func WebsocketSwitchProtocol19(w ResponseWriter, r Request, key string, fn func(
 		log.Println(err)
 		return
 	}
-
+	single := key + r.Query.Get("mark")
 	// 单个长链接服务
 	if r.Query.Get("type") == "single" {
 		cedarWebsocketSingle.Lock()
-		cedarWebsocketSingle.Map[r.Query.Get("mark")] = nc.RemoteAddr().String()
+		cedarWebsocketSingle.Map[single] = nc.RemoteAddr().String()
 		cedarWebsocketSingle.Unlock()
 	}
 
@@ -168,10 +168,10 @@ func WebsocketSwitchProtocol19(w ResponseWriter, r Request, key string, fn func(
 		room.Map[nc.RemoteAddr().String()] = nc
 		// cedarWebsocketHub.Store(key, room2)
 		cedarWebsocketHub[key] = room
-		go DealLogic(nc, room, fn)
+		go DealLogic(nc, room, single, fn)
 	} else {
 		room.Map[nc.RemoteAddr().String()] = nc
-		go DealLogic(nc, room, fn)
+		go DealLogic(nc, room, single, fn)
 	}
 	mux.Unlock()
 }
@@ -218,10 +218,11 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		log.Println(err)
 		return
 	}
+	single := key + r.Query.Get("mark")
 	// 单个长链接服务
 	if r.Query.Get("type") == "single" {
 		cedarWebsocketSingle.Lock()
-		cedarWebsocketSingle.Map[r.Query.Get("mark")] = nc.RemoteAddr().String()
+		cedarWebsocketSingle.Map[single] = nc.RemoteAddr().String()
 		cedarWebsocketSingle.Unlock()
 	}
 	mux.Lock()
@@ -231,15 +232,15 @@ func WebsocketSwitchProtocol(w ResponseWriter, r Request, key string, fn func(va
 		room.Map = make(map[string]net.Conn)
 		room.Map[nc.RemoteAddr().String()] = nc
 		cedarWebsocketHub[key] = room
-		go DealLogic(nc, room, fn)
+		go DealLogic(nc, room, single, fn)
 	} else {
 		room.Map[nc.RemoteAddr().String()] = nc
-		go DealLogic(nc, room, fn)
+		go DealLogic(nc, room, single, fn)
 	}
 	mux.Unlock()
 
 }
-func DealLogic(nc net.Conn, room *RoomMap, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
+func DealLogic(nc net.Conn, room *RoomMap, single string, fn func(value *CedarWebSocketBuffReader, writer *CedarWebsocketWriter)) {
 
 	closeHj := make(chan bool)
 	writer := &CedarWebsocketWriter{
@@ -267,8 +268,8 @@ func DealLogic(nc net.Conn, room *RoomMap, fn func(value *CedarWebSocketBuffRead
 	}
 	room.Unlock()
 	cedarWebsocketSingle.Lock()
-	if _, ok := cedarWebsocketSingle.Map[nc.RemoteAddr().String()]; ok {
-		delete(cedarWebsocketSingle.Map, nc.RemoteAddr().String())
+	if _, ok := cedarWebsocketSingle.Map[single]; ok {
+		delete(cedarWebsocketSingle.Map, single)
 	}
 	cedarWebsocketSingle.Unlock()
 	if debug {
@@ -320,7 +321,7 @@ func WebsocketSwitchPush(key string, mark string, op int, data []byte) error {
 		if mark != "" {
 			cedarWebsocketSingle.RLock()
 			defer cedarWebsocketSingle.RUnlock()
-			if v, ok := cedarWebsocketSingle.Map[mark]; ok {
+			if v, ok := cedarWebsocketSingle.Map[key+mark]; ok {
 				if ncx, ok := nc.Map[v]; ok {
 					ncx.Write(socketReplay(op, data))
 				} else {
@@ -481,4 +482,15 @@ func (sbr *CedarWebSocketBuffReader) Scan(v interface{}) error {
 		return fmt.Errorf("data length is zero")
 	}
 	return json.Unmarshal(sbr.Data, v)
+}
+
+func WebsocketConnectNumberWithRoom(room string) int {
+	return len(cedarWebsocketHub[room].Map)
+}
+
+func WebsocketConnectWithSingle(room, mark string) int {
+	if _, ok := cedarWebsocketSingle.Map[room+mark]; ok {
+		return 1
+	}
+	return 0
 }
