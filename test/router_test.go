@@ -136,6 +136,7 @@ func TestWebsocket(t *testing.T) {
 	r := uc.NewRouter()
 	// r.Debug()
 	// r.Debug()
+
 	r.Get("/ws", func(writer uc.ResponseWriter, request uc.Request) {
 		n := rand.Intn(1000)
 		log.Println("rand number", n)
@@ -148,6 +149,12 @@ func TestWebsocket(t *testing.T) {
 		if err != nil {
 			return
 		}
+	})
+	r.Get("ws/count", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data(uc.WebsocketConnectNumberWithRoom("123")).Send()
+	})
+	r.Get("ws/single/count", func(writer uc.ResponseWriter, request uc.Request) {
+		writer.Data(uc.WebsocketConnectWithSingle("123", "1231234")).Send()
 	})
 	http.ListenAndServe(":8080", r)
 }
