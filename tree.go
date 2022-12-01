@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"golang.org/x/time/rate"
 	"log"
 	"net/http"
 	"os"
